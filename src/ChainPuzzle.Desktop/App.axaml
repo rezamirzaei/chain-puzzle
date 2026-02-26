@@ -1,0 +1,26 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="ChainPuzzle.Desktop.App"
+             RequestedThemeVariant="Light">
+  <Application.Styles>
+    <FluentTheme />
+    <Style Selector="Border.panel">
+      <Setter Property="Background" Value="#CCFFFFFF" />
+      <Setter Property="BorderBrush" Value="#E6FFFFFF" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="16" />
+      <Setter Property="Padding" Value="16" />
+    </Style>
+    <Style Selector="Button.action">
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="Background" Value="#023047" />
+      <Setter Property="BorderBrush" Value="#1D3557" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Padding" Value="12,8" />
+      <Setter Property="Margin" Value="0,0,0,8" />
+      <Setter Property="FontSize" Value="14" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="CornerRadius" Value="10" />
+    </Style>
+  </Application.Styles>
+</Application>

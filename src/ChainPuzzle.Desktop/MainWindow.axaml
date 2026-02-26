@@ -1,0 +1,149 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="using:ChainPuzzle.Desktop.Controls"
+        x:Class="ChainPuzzle.Desktop.MainWindow"
+        Width="1420"
+        Height="920"
+        MinWidth="980"
+        MinHeight="680"
+        Title="Christmas Tree Chain Puzzle"
+        KeyDown="Window_OnKeyDown">
+  <Grid>
+    <controls:ChainBoardControl x:Name="Board"
+                                PointerPressed="Board_OnPointerPressed"
+                                PointerMoved="Board_OnPointerMoved"
+                                PointerReleased="Board_OnPointerReleased" />
+
+    <Grid Margin="16"
+          ColumnDefinitions="420,*,320">
+      <Border Grid.Column="0"
+              VerticalAlignment="Top"
+              Classes="panel">
+        <StackPanel>
+          <TextBlock Text="Chain Puzzle"
+                     FontSize="13"
+                     FontWeight="Bold"
+                     Foreground="#1D4ED8" />
+          <TextBlock x:Name="TitleText"
+                     Margin="0,8,0,0"
+                     FontSize="30"
+                     FontWeight="SemiBold"
+                     Foreground="#0F172A" />
+          <TextBlock x:Name="SubtitleText"
+                     Margin="0,0,0,10"
+                     FontSize="19"
+                     Foreground="#475569" />
+          <TextBlock x:Name="DescriptionText"
+                     Margin="0,0,0,14"
+                     TextWrapping="Wrap"
+                     FontSize="15"
+                     Foreground="#334155" />
+
+          <Grid ColumnDefinitions="*,*,*"
+                ColumnSpacing="8"
+                Margin="0,0,0,12">
+            <Border Grid.Column="0"
+                    CornerRadius="10"
+                    Background="#F8FAFC"
+                    BorderBrush="#D1D5DB"
+                    BorderThickness="1"
+                    Padding="8">
+              <StackPanel>
+                <TextBlock Text="Progress"
+                           FontSize="11"
+                           Foreground="#64748B" />
+                <TextBlock x:Name="ProgressText"
+                           FontSize="14"
+                           FontWeight="Bold" />
+              </StackPanel>
+            </Border>
+            <Border Grid.Column="1"
+                    CornerRadius="10"
+                    Background="#F8FAFC"
+                    BorderBrush="#D1D5DB"
+                    BorderThickness="1"
+                    Padding="8">
+              <StackPanel>
+                <TextBlock Text="Moves"
+                           FontSize="11"
+                           Foreground="#64748B" />
+                <TextBlock x:Name="MovesText"
+                           FontSize="14"
+                           FontWeight="Bold" />
+              </StackPanel>
+            </Border>
+            <Border Grid.Column="2"
+                    CornerRadius="10"
+                    Background="#F8FAFC"
+                    BorderBrush="#D1D5DB"
+                    BorderThickness="1"
+                    Padding="8">
+              <StackPanel>
+                <TextBlock Text="Best Route"
+                           FontSize="11"
+                           Foreground="#64748B" />
+                <TextBlock x:Name="OptimalText"
+                           FontSize="14"
+                           FontWeight="Bold" />
+              </StackPanel>
+            </Border>
+          </Grid>
+
+          <Border x:Name="ValidationBadge"
+                  Background="#2906D6A0"
+                  BorderBrush="#7B06D6A0"
+                  BorderThickness="1"
+                  CornerRadius="20"
+                  Padding="10,5"
+                  HorizontalAlignment="Left">
+            <TextBlock x:Name="ValidationText"
+                       FontWeight="Bold"
+                       Foreground="#065F46" />
+          </Border>
+
+          <TextBlock x:Name="StatusText"
+                     Margin="0,12,0,0"
+                     FontSize="15"
+                     FontWeight="SemiBold"
+                     Foreground="#0F172A"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <Border Grid.Column="2"
+              VerticalAlignment="Top"
+              Classes="panel">
+        <StackPanel>
+          <Button x:Name="PreviousButton"
+                  Classes="action"
+                  Content="Previous"
+                  Click="PreviousButton_OnClick" />
+          <Button x:Name="NextButton"
+                  Classes="action"
+                  Content="Next"
+                  Click="NextButton_OnClick" />
+          <Button x:Name="ResetButton"
+                  Classes="action"
+                  Content="Reset"
+                  Click="ResetButton_OnClick" />
+          <Button x:Name="HintButton"
+                  Classes="action"
+                  Content="Hint"
+                  Click="HintButton_OnClick" />
+          <Button x:Name="RotateLeftButton"
+                  Classes="action"
+                  Content="Rotate Left"
+                  Click="RotateLeftButton_OnClick" />
+          <Button x:Name="RotateRightButton"
+                  Classes="action"
+                  Content="Rotate Right"
+                  Click="RotateRightButton_OnClick" />
+          <TextBlock Margin="0,6,0,0"
+                     TextWrapping="Wrap"
+                     Foreground="#475569"
+                     Text="Click near a joint, then drag or use Rotate Left/Right.&#10;Keyboard: Up/Down chooses joint, A/D rotates." />
+        </StackPanel>
+      </Border>
+    </Grid>
+  </Grid>
+</Window>
