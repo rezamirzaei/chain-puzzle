@@ -205,17 +205,22 @@ public sealed class ChainBoardControl : Control
             return;
         }
 
-        var alpha = _isSolved ? (byte)200 : (byte)170;
-        var pegFill = new SolidColorBrush(Color.FromArgb(alpha, _accentColor.R, _accentColor.G, _accentColor.B));
-        var pegStroke = new SolidColorBrush(Color.FromArgb(230, _accentColor.R, _accentColor.G, _accentColor.B));
-        var pegPen = new Pen(pegStroke, 1.8);
-        var pegCore = new SolidColorBrush(Color.FromArgb(235, 245, 245, 245));
+        var glowBrush = new SolidColorBrush(Color.FromArgb(_isSolved ? (byte)72 : (byte)48, _accentColor.R, _accentColor.G, _accentColor.B));
+        var tileBrush = new SolidColorBrush(Color.FromArgb(_isSolved ? (byte)220 : (byte)185, _accentColor.R, _accentColor.G, _accentColor.B));
+        var tilePen = new Pen(
+            new SolidColorBrush(Color.FromArgb(_isSolved ? (byte)235 : (byte)205, _accentColor.R, _accentColor.G, _accentColor.B)),
+            1.3);
+        var highlightBrush = new SolidColorBrush(Color.FromArgb(_isSolved ? (byte)70 : (byte)42, 255, 255, 255));
+        var glowRadius = _scale * 0.64;
+        var tileRadius = _scale * 0.585;
+        var highlightRadius = _scale * 0.36;
 
         foreach (var point in _targetPoints)
         {
-            var peg = WorldToScreen(point);
-            context.DrawEllipse(pegFill, pegPen, peg, 5.2, 5.2);
-            context.DrawEllipse(pegCore, null, peg, 1.6, 1.6);
+            var center = WorldToScreen(point);
+            context.DrawGeometry(glowBrush, null, BuildHexTileGeometry(center, glowRadius));
+            context.DrawGeometry(tileBrush, tilePen, BuildHexTileGeometry(center, tileRadius));
+            context.DrawGeometry(highlightBrush, null, BuildHexTileGeometry(center, highlightRadius));
         }
     }
 
@@ -287,19 +292,27 @@ public sealed class ChainBoardControl : Control
         }
     }
 
-    private StreamGeometry BuildGeometry(IReadOnlyList<Point> points)
+    private static StreamGeometry BuildHexTileGeometry(Point center, double radius)
     {
         var geometry = new StreamGeometry();
         using var geometryContext = geometry.Open();
-        geometryContext.BeginFigure(WorldToScreen(points[0]), false);
+        geometryContext.BeginFigure(GetHexVertex(center, radius, 0), true);
 
-        for (var index = 1; index < points.Count; index += 1)
+        for (var index = 1; index < 6; index += 1)
         {
-            geometryContext.LineTo(WorldToScreen(points[index]));
+            geometryContext.LineTo(GetHexVertex(center, radius, index));
         }
 
-        geometryContext.EndFigure(false);
+        geometryContext.EndFigure(true);
         return geometry;
+    }
+
+    private static Point GetHexVertex(Point center, double radius, int vertexIndex)
+    {
+        var angle = -Math.PI / 2d + (vertexIndex * Math.PI / 3d);
+        return new Point(
+            center.X + Math.Cos(angle) * radius,
+            center.Y + Math.Sin(angle) * radius);
     }
 
     private static void IncludePoint(

@@ -14,6 +14,40 @@
                                 PointerMoved="Board_OnPointerMoved"
                                 PointerReleased="Board_OnPointerReleased" />
 
+    <Border x:Name="SolvedCard"
+            Width="380"
+            Padding="18"
+            Margin="0,0,0,24"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Bottom"
+            IsVisible="False"
+            Classes="panel">
+      <StackPanel>
+        <TextBlock x:Name="SolvedTitleText"
+                   FontSize="26"
+                   FontWeight="SemiBold"
+                   Foreground="#0F172A" />
+        <TextBlock x:Name="SolvedSummaryText"
+                   Margin="0,8,0,14"
+                   FontSize="15"
+                   Foreground="#334155"
+                   TextWrapping="Wrap" />
+        <Grid ColumnDefinitions="*,*"
+              ColumnSpacing="10">
+          <Button x:Name="SolvedResetButton"
+                  Grid.Column="0"
+                  Classes="action secondary"
+                  Content="Replay Chapter"
+                  Click="SolvedResetButton_OnClick" />
+          <Button x:Name="SolvedNextButton"
+                  Grid.Column="1"
+                  Classes="action"
+                  Content="Next Chapter"
+                  Click="SolvedNextButton_OnClick" />
+        </Grid>
+      </StackPanel>
+    </Border>
+
     <Grid Margin="16"
           ColumnDefinitions="420,*,320">
       <Border Grid.Column="0"
@@ -39,10 +73,21 @@
                      FontSize="15"
                      Foreground="#334155" />
 
-          <Grid ColumnDefinitions="*,*,*"
+          <TextBlock Text="Jump To Chapter"
+                     FontSize="11"
+                     FontWeight="Bold"
+                     Foreground="#64748B" />
+          <ComboBox x:Name="ChapterPicker"
+                    Margin="0,6,0,14"
+                    SelectionChanged="ChapterPicker_OnSelectionChanged" />
+
+          <Grid ColumnDefinitions="*,*"
+                RowDefinitions="Auto,Auto"
                 ColumnSpacing="8"
+                RowSpacing="8"
                 Margin="0,0,0,12">
             <Border Grid.Column="0"
+                    Grid.Row="0"
                     CornerRadius="10"
                     Background="#F8FAFC"
                     BorderBrush="#D1D5DB"
@@ -58,6 +103,23 @@
               </StackPanel>
             </Border>
             <Border Grid.Column="1"
+                    Grid.Row="0"
+                    CornerRadius="10"
+                    Background="#F8FAFC"
+                    BorderBrush="#D1D5DB"
+                    BorderThickness="1"
+                    Padding="8">
+              <StackPanel>
+                <TextBlock Text="Chapters Cleared"
+                           FontSize="11"
+                           Foreground="#64748B" />
+                <TextBlock x:Name="CompletedText"
+                           FontSize="14"
+                           FontWeight="Bold" />
+              </StackPanel>
+            </Border>
+            <Border Grid.Column="0"
+                    Grid.Row="1"
                     CornerRadius="10"
                     Background="#F8FAFC"
                     BorderBrush="#D1D5DB"
@@ -72,17 +134,18 @@
                            FontWeight="Bold" />
               </StackPanel>
             </Border>
-            <Border Grid.Column="2"
+            <Border Grid.Column="1"
+                    Grid.Row="1"
                     CornerRadius="10"
                     Background="#F8FAFC"
                     BorderBrush="#D1D5DB"
                     BorderThickness="1"
                     Padding="8">
               <StackPanel>
-                <TextBlock Text="Best Route"
+                <TextBlock Text="Best Run"
                            FontSize="11"
                            Foreground="#64748B" />
-                <TextBlock x:Name="OptimalText"
+                <TextBlock x:Name="BestText"
                            FontSize="14"
                            FontWeight="Bold" />
               </StackPanel>
@@ -90,15 +153,15 @@
           </Grid>
 
           <Border x:Name="ValidationBadge"
-                  Background="#2906D6A0"
-                  BorderBrush="#7B06D6A0"
+                  Background="#1E1D4ED8"
+                  BorderBrush="#421D4ED8"
                   BorderThickness="1"
                   CornerRadius="20"
                   Padding="10,5"
                   HorizontalAlignment="Left">
             <TextBlock x:Name="ValidationText"
                        FontWeight="Bold"
-                       Foreground="#065F46" />
+                       Foreground="#1D4ED8" />
           </Border>
 
           <TextBlock x:Name="StatusText"
@@ -115,15 +178,23 @@
               Classes="panel">
         <StackPanel>
           <Button x:Name="PreviousButton"
-                  Classes="action"
+                  Classes="action secondary"
                   Content="Previous"
                   Click="PreviousButton_OnClick" />
           <Button x:Name="NextButton"
                   Classes="action"
                   Content="Next"
                   Click="NextButton_OnClick" />
+          <Button x:Name="UndoButton"
+                  Classes="action secondary"
+                  Content="Undo"
+                  Click="UndoButton_OnClick" />
+          <Button x:Name="RedoButton"
+                  Classes="action secondary"
+                  Content="Redo"
+                  Click="RedoButton_OnClick" />
           <Button x:Name="ResetButton"
-                  Classes="action"
+                  Classes="action secondary"
                   Content="Reset"
                   Click="ResetButton_OnClick" />
           <Button x:Name="HintButton"
@@ -141,7 +212,7 @@
           <TextBlock Margin="0,6,0,0"
                      TextWrapping="Wrap"
                      Foreground="#475569"
-                     Text="Click near a joint, then drag or use Rotate Left/Right.&#10;Keyboard: Up/Down chooses joint, A/D rotates." />
+                     Text="Click near a joint, then drag or use Rotate Left/Right.&#10;Keyboard: Up/Down chooses a joint. A/D rotates. Ctrl+Z undoes, Ctrl+Y redoes." />
         </StackPanel>
       </Border>
     </Grid>

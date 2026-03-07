@@ -2,7 +2,11 @@ namespace ChainPuzzle.Core;
 
 public sealed class ChapterGame
 {
+    private sealed record HistoryEntry(ChainState State, int Moves);
+
     private readonly Dictionary<int, ChainSolver> _solvers = new();
+    private readonly Stack<HistoryEntry> _undoHistory = new();
+    private readonly Stack<HistoryEntry> _redoHistory = new();
 
     public ChapterGame(IReadOnlyList<ChainLevel> levels)
     {
@@ -33,6 +37,10 @@ public sealed class ChapterGame
 
     public bool IsSolved => CurrentLevel.IsSolved(CurrentState);
 
+    public bool CanUndo => _undoHistory.Count > 0;
+
+    public bool CanRedo => _redoHistory.Count > 0;
+
     public void SetLevel(int levelIndex)
     {
         LevelIndex = Math.Clamp(levelIndex, 0, Levels.Count - 1);
@@ -53,6 +61,8 @@ public sealed class ChapterGame
     {
         CurrentState = CurrentLevel.StartState.Clone();
         Moves = 0;
+        _undoHistory.Clear();
+        _redoHistory.Clear();
     }
 
     public bool TryRotate(int jointIndex, int rotation, out ChainState nextState)
@@ -69,9 +79,45 @@ public sealed class ChapterGame
             return false;
         }
 
+        _undoHistory.Push(new HistoryEntry(CurrentState, Moves));
+        _redoHistory.Clear();
         CurrentState = candidate;
         nextState = candidate;
         Moves += 1;
+
+        if (IsSolved)
+        {
+            CompletedLevelIds.Add(CurrentLevel.Id);
+        }
+
+        return true;
+    }
+
+    public bool TryUndo()
+    {
+        if (_undoHistory.Count == 0)
+        {
+            return false;
+        }
+
+        _redoHistory.Push(new HistoryEntry(CurrentState, Moves));
+        var previous = _undoHistory.Pop();
+        CurrentState = previous.State;
+        Moves = previous.Moves;
+        return true;
+    }
+
+    public bool TryRedo()
+    {
+        if (_redoHistory.Count == 0)
+        {
+            return false;
+        }
+
+        _undoHistory.Push(new HistoryEntry(CurrentState, Moves));
+        var next = _redoHistory.Pop();
+        CurrentState = next.State;
+        Moves = next.Moves;
 
         if (IsSolved)
         {

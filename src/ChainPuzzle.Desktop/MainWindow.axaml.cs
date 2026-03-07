@@ -26,29 +26,41 @@ public partial class MainWindow : Window
     private sealed record DragState(int JointIndex, double LastAngle, Point LastPoint);
 
     private readonly ChapterGame _game;
+    private readonly GameProgressStore _progressStore = new();
+    private readonly Dictionary<string, int> _bestMovesByLevelId = new(StringComparer.Ordinal);
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private readonly DispatcherTimer _frameTimer;
 
     private readonly ChainBoardControl _board;
+    private readonly Border _validationBadge;
+    private readonly Border _solvedCard;
     private readonly TextBlock _titleText;
     private readonly TextBlock _subtitleText;
     private readonly TextBlock _descriptionText;
     private readonly TextBlock _progressText;
+    private readonly TextBlock _completedText;
     private readonly TextBlock _movesText;
-    private readonly TextBlock _optimalText;
+    private readonly TextBlock _bestText;
     private readonly TextBlock _validationText;
     private readonly TextBlock _statusText;
+    private readonly TextBlock _solvedTitleText;
+    private readonly TextBlock _solvedSummaryText;
+    private readonly ComboBox _chapterPicker;
     private readonly Button _previousButton;
     private readonly Button _nextButton;
+    private readonly Button _undoButton;
+    private readonly Button _redoButton;
     private readonly Button _resetButton;
     private readonly Button _hintButton;
     private readonly Button _rotateLeftButton;
     private readonly Button _rotateRightButton;
+    private readonly Button _solvedNextButton;
 
     private RotationAnimation? _animation;
     private DragState? _dragState;
     private int? _selectedJointIndex;
     private bool _isFindingHint;
+    private bool _isSyncingChapterPicker;
     private string _statusMessage = "Drag a joint to rotate the chain and fit the target shape.";
 
     public MainWindow()
@@ -56,20 +68,29 @@ public partial class MainWindow : Window
         InitializeComponent();
 
         _board = GetRequiredControl<ChainBoardControl>("Board");
+        _validationBadge = GetRequiredControl<Border>("ValidationBadge");
+        _solvedCard = GetRequiredControl<Border>("SolvedCard");
         _titleText = GetRequiredControl<TextBlock>("TitleText");
         _subtitleText = GetRequiredControl<TextBlock>("SubtitleText");
         _descriptionText = GetRequiredControl<TextBlock>("DescriptionText");
         _progressText = GetRequiredControl<TextBlock>("ProgressText");
+        _completedText = GetRequiredControl<TextBlock>("CompletedText");
         _movesText = GetRequiredControl<TextBlock>("MovesText");
-        _optimalText = GetRequiredControl<TextBlock>("OptimalText");
+        _bestText = GetRequiredControl<TextBlock>("BestText");
         _validationText = GetRequiredControl<TextBlock>("ValidationText");
         _statusText = GetRequiredControl<TextBlock>("StatusText");
+        _solvedTitleText = GetRequiredControl<TextBlock>("SolvedTitleText");
+        _solvedSummaryText = GetRequiredControl<TextBlock>("SolvedSummaryText");
+        _chapterPicker = GetRequiredControl<ComboBox>("ChapterPicker");
         _previousButton = GetRequiredControl<Button>("PreviousButton");
         _nextButton = GetRequiredControl<Button>("NextButton");
+        _undoButton = GetRequiredControl<Button>("UndoButton");
+        _redoButton = GetRequiredControl<Button>("RedoButton");
         _resetButton = GetRequiredControl<Button>("ResetButton");
         _hintButton = GetRequiredControl<Button>("HintButton");
         _rotateLeftButton = GetRequiredControl<Button>("RotateLeftButton");
         _rotateRightButton = GetRequiredControl<Button>("RotateRightButton");
+        _solvedNextButton = GetRequiredControl<Button>("SolvedNextButton");
 
         _game = new ChapterGame(ChapterFactory.CreateChapters());
         _frameTimer = new DispatcherTimer
@@ -77,7 +98,9 @@ public partial class MainWindow : Window
             Interval = TimeSpan.FromMilliseconds(16)
         };
         _frameTimer.Tick += OnFrameTimerTick;
+        Closed += (_, _) => SaveProgress();
 
+        LoadProgress();
         RefreshHud();
         RenderFrame();
     }
@@ -139,7 +162,7 @@ public partial class MainWindow : Window
         _animation = null;
         if (_game.IsSolved)
         {
-            _statusMessage = $"{_game.CurrentLevel.Subtitle} solved. Continue to the next chapter.";
+            FinalizeSolvedState();
         }
 
         RefreshHud();
@@ -195,42 +218,49 @@ public partial class MainWindow : Window
     private void RefreshHud()
     {
         var level = _game.CurrentLevel;
-        var validation = level.Validation;
+        var accentColor = ParseColor(level.AccentHex, Colors.SteelBlue);
+        var hasBestRun = _bestMovesByLevelId.TryGetValue(level.Id, out var bestMoves);
 
         _titleText.Text = level.Title;
         _subtitleText.Text = level.Subtitle;
         _descriptionText.Text = level.Description;
 
         _progressText.Text = $"{_game.LevelIndex + 1}/{_game.Levels.Count}";
+        _completedText.Text = $"{_game.CompletedLevelIds.Count}/{_game.Levels.Count}";
         _movesText.Text = _game.Moves.ToString(CultureInfo.InvariantCulture);
-        _optimalText.Text = validation?.ShortestPathLength.ToString(CultureInfo.InvariantCulture) ?? "-";
+        _bestText.Text = hasBestRun ? bestMoves.ToString(CultureInfo.InvariantCulture) : "-";
 
-        _validationText.Text = validation is null
-            ? "Validation pending"
-            : validation.SolutionCount == 1
-                ? "Unique solution verified"
-                : "Invalid chapter";
+        _validationText.Text = BuildBadgeText(hasBestRun, bestMoves);
+        ApplyBadgeStyle(hasBestRun, bestMoves, accentColor);
 
         var solvedStatus = _game.IsSolved && !IsBusy
-            ? "Solved. Use Next to continue."
+            ? BuildSolvedStatus(hasBestRun, bestMoves)
             : _statusMessage;
         _statusText.Text = _selectedJointIndex is null
             ? solvedStatus
             : $"{solvedStatus} Selected joint: {_selectedJointIndex}.";
 
-        _previousButton.IsEnabled = _game.LevelIndex > 0;
-        _nextButton.IsEnabled = _game.LevelIndex < _game.Levels.Count - 1;
+        _previousButton.IsEnabled = !IsBusy && _game.LevelIndex > 0;
+        _nextButton.IsEnabled = !IsBusy && _game.LevelIndex < _game.Levels.Count - 1;
+        _undoButton.IsEnabled = !IsBusy && _game.CanUndo;
+        _redoButton.IsEnabled = !IsBusy && _game.CanRedo;
         _resetButton.IsEnabled = !IsBusy;
         _hintButton.IsEnabled = !IsBusy && !_game.IsSolved;
+        _chapterPicker.IsEnabled = !IsBusy;
+
         var canRotateManually = !IsBusy && !_game.IsSolved && _selectedJointIndex is not null;
         _rotateLeftButton.IsEnabled = canRotateManually;
         _rotateRightButton.IsEnabled = canRotateManually;
 
-        var accent = new SolidColorBrush(ParseColor(level.AccentHex, Colors.SteelBlue));
-        _previousButton.Background = accent;
+        var accent = new SolidColorBrush(accentColor);
         _nextButton.Background = accent;
-        _resetButton.Background = accent;
         _hintButton.Background = accent;
+        _rotateLeftButton.Background = accent;
+        _rotateRightButton.Background = accent;
+        _solvedNextButton.Background = accent;
+
+        UpdateChapterPickerItems();
+        UpdateSolvedCard(hasBestRun, bestMoves);
     }
 
     private bool TryRotate(int jointIndex, int rotation)
@@ -271,26 +301,235 @@ public partial class MainWindow : Window
         }
     }
 
-    private void ChangeLevel(int nextIndex, string status)
+    private void ChangeLevel(int nextIndex, string? status = null)
     {
         _game.SetLevel(nextIndex);
         _animation = null;
         _isFindingHint = false;
         _dragState = null;
         _selectedJointIndex = null;
-        _statusMessage = status;
+        _statusMessage = status ?? $"{_game.CurrentLevel.Subtitle} loaded.";
+        SaveProgress();
         RefreshHud();
         RenderFrame();
     }
 
+    private void LoadProgress()
+    {
+        var document = _progressStore.Load();
+        var knownLevelIds = _game.Levels
+            .Select(level => level.Id)
+            .ToHashSet(StringComparer.Ordinal);
+
+        foreach (var completedLevelId in document.CompletedLevelIds)
+        {
+            if (knownLevelIds.Contains(completedLevelId))
+            {
+                _game.CompletedLevelIds.Add(completedLevelId);
+            }
+        }
+
+        foreach (var entry in document.BestMovesByLevelId)
+        {
+            if (knownLevelIds.Contains(entry.Key) && entry.Value > 0)
+            {
+                _bestMovesByLevelId[entry.Key] = entry.Value;
+            }
+        }
+
+        if (document.CurrentLevelIndex != 0
+            || _game.CompletedLevelIds.Count > 0
+            || _bestMovesByLevelId.Count > 0)
+        {
+            _game.SetLevel(document.CurrentLevelIndex);
+            _statusMessage = "Progress restored.";
+        }
+
+        UpdateChapterPickerItems();
+    }
+
+    private void SaveProgress()
+    {
+        _progressStore.Save(
+            new GameProgressDocument(
+                _game.LevelIndex,
+                _game.CompletedLevelIds.OrderBy(id => id, StringComparer.Ordinal).ToArray(),
+                new Dictionary<string, int>(_bestMovesByLevelId, StringComparer.Ordinal)));
+    }
+
+    private bool RecordBestRun()
+    {
+        var levelId = _game.CurrentLevel.Id;
+        if (_bestMovesByLevelId.TryGetValue(levelId, out var existingBest) && existingBest <= _game.Moves)
+        {
+            return false;
+        }
+
+        _bestMovesByLevelId[levelId] = _game.Moves;
+        return true;
+    }
+
+    private void FinalizeSolvedState()
+    {
+        _selectedJointIndex = null;
+        _dragState = null;
+
+        var isNewBest = RecordBestRun();
+        _statusMessage = isNewBest
+            ? $"{_game.CurrentLevel.Subtitle} solved in {_game.Moves} moves. New personal best."
+            : $"{_game.CurrentLevel.Subtitle} solved in {_game.Moves} moves.";
+        SaveProgress();
+    }
+
+    private void UpdateSolvedCard(bool hasBestRun, int bestMoves)
+    {
+        _solvedCard.IsVisible = _game.IsSolved && !IsBusy;
+        if (!_solvedCard.IsVisible)
+        {
+            return;
+        }
+
+        _solvedTitleText.Text = _game.LevelIndex == _game.Levels.Count - 1
+            ? "Puzzle Set Complete"
+            : $"{_game.CurrentLevel.Subtitle} Solved";
+        _solvedSummaryText.Text = BuildSolvedCardSummary(hasBestRun, bestMoves);
+        _solvedNextButton.IsEnabled = _game.LevelIndex < _game.Levels.Count - 1;
+        _solvedNextButton.Content = _game.LevelIndex == _game.Levels.Count - 1
+            ? "All Cleared"
+            : "Next Chapter";
+    }
+
+    private string BuildSolvedCardSummary(bool hasBestRun, int bestMoves)
+    {
+        var bestClause = hasBestRun
+            ? $"Best run: {bestMoves} move{(bestMoves == 1 ? string.Empty : "s")}."
+            : "First clear recorded.";
+        var completionClause = _game.LevelIndex == _game.Levels.Count - 1
+            ? $"You have cleared all {_game.Levels.Count} chapters."
+            : "Use Next Chapter to keep the run going.";
+
+        return $"Solved in {_game.Moves} move{(_game.Moves == 1 ? string.Empty : "s")}. {bestClause} {completionClause}";
+    }
+
+    private string BuildSolvedStatus(bool hasBestRun, int bestMoves)
+    {
+        if (!hasBestRun)
+        {
+            return $"Solved in {_game.Moves} moves.";
+        }
+
+        return _game.Moves == bestMoves
+            ? $"Solved in {_game.Moves} moves. Personal best matched."
+            : $"Solved in {_game.Moves} moves. Best run is {bestMoves}.";
+    }
+
+    private string BuildBadgeText(bool hasBestRun, int bestMoves)
+    {
+        if (_game.IsSolved && !IsBusy && hasBestRun && _game.Moves == bestMoves)
+        {
+            return "Personal best";
+        }
+
+        if (_game.IsSolved && !IsBusy)
+        {
+            return "Chapter cleared";
+        }
+
+        if (hasBestRun)
+        {
+            return $"Best run: {bestMoves} moves";
+        }
+
+        return _game.CompletedLevelIds.Contains(_game.CurrentLevel.Id)
+            ? "Cleared before"
+            : "Fresh chapter";
+    }
+
+    private void ApplyBadgeStyle(bool hasBestRun, int bestMoves, Color accentColor)
+    {
+        var background = Color.FromArgb(30, accentColor.R, accentColor.G, accentColor.B);
+        var border = Color.FromArgb(90, accentColor.R, accentColor.G, accentColor.B);
+        var foreground = accentColor;
+
+        if (_game.IsSolved && !IsBusy && hasBestRun && _game.Moves == bestMoves)
+        {
+            background = ParseColor("#DCFCE7", Colors.Honeydew);
+            border = ParseColor("#86EFAC", Colors.LightGreen);
+            foreground = ParseColor("#166534", Colors.DarkGreen);
+        }
+        else if (_game.IsSolved && !IsBusy)
+        {
+            background = ParseColor("#FEF3C7", Colors.Bisque);
+            border = ParseColor("#FCD34D", Colors.Goldenrod);
+            foreground = ParseColor("#92400E", Colors.SaddleBrown);
+        }
+
+        _validationBadge.Background = new SolidColorBrush(background);
+        _validationBadge.BorderBrush = new SolidColorBrush(border);
+        _validationText.Foreground = new SolidColorBrush(foreground);
+    }
+
+    private void UpdateChapterPickerItems()
+    {
+        _isSyncingChapterPicker = true;
+        _chapterPicker.ItemsSource = _game.Levels
+            .Select((level, index) =>
+            {
+                var completedMarker = _game.CompletedLevelIds.Contains(level.Id) ? "[x]" : "[ ]";
+                var bestSuffix = _bestMovesByLevelId.TryGetValue(level.Id, out var best)
+                    ? $"  best {best}"
+                    : string.Empty;
+                return $"{completedMarker} {index + 1:00}. {level.Subtitle}{bestSuffix}";
+            })
+            .ToArray();
+        _chapterPicker.SelectedIndex = _game.LevelIndex;
+        _isSyncingChapterPicker = false;
+    }
+
     private void PreviousButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        ChangeLevel(_game.LevelIndex - 1, $"Chapter {_game.LevelIndex} loaded.");
+        ChangeLevel(_game.LevelIndex - 1);
     }
 
     private void NextButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        ChangeLevel(_game.LevelIndex + 1, $"Chapter {_game.LevelIndex + 2} loaded.");
+        ChangeLevel(_game.LevelIndex + 1);
+    }
+
+    private void UndoButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (IsBusy || !_game.TryUndo())
+        {
+            return;
+        }
+
+        _animation = null;
+        _dragState = null;
+        _statusMessage = "Undid the last move.";
+        RefreshHud();
+        RenderFrame();
+    }
+
+    private void RedoButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (IsBusy || !_game.TryRedo())
+        {
+            return;
+        }
+
+        _animation = null;
+        _dragState = null;
+        if (_game.IsSolved)
+        {
+            FinalizeSolvedState();
+        }
+        else
+        {
+            _statusMessage = "Replayed the move.";
+        }
+
+        RefreshHud();
+        RenderFrame();
     }
 
     private void ResetButton_OnClick(object? sender, RoutedEventArgs e)
@@ -299,6 +538,7 @@ public partial class MainWindow : Window
         _animation = null;
         _isFindingHint = false;
         _dragState = null;
+        _selectedJointIndex = null;
         _statusMessage = "Chapter reset.";
         RefreshHud();
         RenderFrame();
@@ -363,9 +603,34 @@ public partial class MainWindow : Window
         TryRotate(_selectedJointIndex.Value, 1);
     }
 
+    private void SolvedResetButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        ResetButton_OnClick(sender, e);
+    }
+
+    private void SolvedNextButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (_game.LevelIndex >= _game.Levels.Count - 1)
+        {
+            return;
+        }
+
+        NextButton_OnClick(sender, e);
+    }
+
+    private void ChapterPicker_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_isSyncingChapterPicker || _chapterPicker.SelectedIndex < 0 || _chapterPicker.SelectedIndex == _game.LevelIndex)
+        {
+            return;
+        }
+
+        ChangeLevel(_chapterPicker.SelectedIndex);
+    }
+
     private void Board_OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (IsBusy)
+        if (IsBusy || _game.IsSolved)
         {
             return;
         }
@@ -453,6 +718,29 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        {
+            var wantsRedo = e.Key == Key.Y || (e.Key == Key.Z && e.KeyModifiers.HasFlag(KeyModifiers.Shift));
+            if (e.Key == Key.Z && !wantsRedo)
+            {
+                UndoButton_OnClick(sender, new RoutedEventArgs());
+                e.Handled = true;
+                return;
+            }
+
+            if (wantsRedo)
+            {
+                RedoButton_OnClick(sender, new RoutedEventArgs());
+                e.Handled = true;
+                return;
+            }
+        }
+
+        if (_game.IsSolved)
+        {
+            return;
+        }
+
         if (e.Key is Key.Up or Key.Down)
         {
             var minJoint = 1;
@@ -518,6 +806,7 @@ public partial class MainWindow : Window
         {
             angle += Math.PI * 2d;
         }
+
         return angle;
     }
 

@@ -93,6 +93,36 @@ public sealed class ChainCoreTests
     }
 
     [Fact]
+    public void ChapterGameSupportsUndoAndRedo()
+    {
+        var game = new ChapterGame(ChapterFactory.CreateChapters(validate: false));
+        var startSignature = game.CurrentState.PointSignature();
+
+        var solver = new ChainSolver(game.CurrentLevel.SegmentCount);
+        var move = solver.GetLegalMoves(game.CurrentState).First().Move;
+
+        var moved = game.TryRotate(move.JointIndex, move.Rotation, out var movedState);
+        Assert.True(moved);
+        Assert.NotEqual(startSignature, movedState.PointSignature());
+        Assert.Equal(1, game.Moves);
+        Assert.True(game.CanUndo);
+        Assert.False(game.CanRedo);
+
+        var undone = game.TryUndo();
+        Assert.True(undone);
+        Assert.Equal(startSignature, game.CurrentState.PointSignature());
+        Assert.Equal(0, game.Moves);
+        Assert.False(game.CanUndo);
+        Assert.True(game.CanRedo);
+
+        var redone = game.TryRedo();
+        Assert.True(redone);
+        Assert.Equal(movedState.PointSignature(), game.CurrentState.PointSignature());
+        Assert.Equal(1, game.Moves);
+        Assert.True(game.CanUndo);
+    }
+
+    [Fact]
     public void ChapterTargetsAreConnectedFilledAreas()
     {
         var levels = ChapterFactory.CreateChapters(validate: false);
