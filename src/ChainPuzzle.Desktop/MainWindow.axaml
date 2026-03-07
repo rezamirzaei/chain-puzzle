@@ -142,7 +142,7 @@
                     BorderThickness="1"
                     Padding="8">
               <StackPanel>
-                <TextBlock Text="Best Run"
+                <TextBlock Text="Best / Par"
                            FontSize="11"
                            Foreground="#64748B" />
                 <TextBlock x:Name="BestText"

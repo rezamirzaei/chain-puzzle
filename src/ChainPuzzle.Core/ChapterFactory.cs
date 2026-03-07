@@ -8,6 +8,7 @@ public static class ChapterFactory
         string Subtitle,
         string Description,
         string AccentHex,
+        int OptimalMoves,
         int[] GoalDirections,
         int[] StartDirections);
 
@@ -28,6 +29,7 @@ public static class ChapterFactory
             "Christmas Tree",
             "Fit the mixed 1/2/3-link loop into the fir-tree pattern.",
             "#d97706",
+            3,
             new[] { 5, 5, 5, 3, 4, 2, 1, 5, 4, 0, 2, 2, 4, 4, 5, 3, 1, 1, 1 },
             new[] { 5, 5, 5, 3, 5, 3, 2, 0, 5, 1, 2, 2, 3, 3, 4, 2, 0, 0, 0 }),
         new(
@@ -36,6 +38,7 @@ public static class ChapterFactory
             "Filled Shape A",
             "Cover every real dot in this compact filled board using the full linked chain.",
             "#ef4444",
+            3,
             new[] { 1, 1, 2, 1, 5, 4, 5, 4, 4, 4, 4, 5, 5, 5, 3, 2, 2, 3, 2 },
             new[] { 1, 2, 3, 2, 1, 0, 1, 0, 0, 0, 5, 0, 0, 0, 4, 3, 3, 4, 3 }),
         new(
@@ -44,6 +47,7 @@ public static class ChapterFactory
             "Filled Shape B",
             "Route the chain through a dense filled board with no fake interior dots.",
             "#0ea5e9",
+            3,
             new[] { 1, 2, 2, 3, 5, 0, 5, 5, 5, 4, 4, 2, 4, 2, 4, 2, 0, 2, 0 },
             new[] { 1, 2, 2, 3, 4, 5, 5, 5, 5, 4, 5, 3, 5, 3, 5, 3, 1, 3, 1 }),
         new(
@@ -52,6 +56,7 @@ public static class ChapterFactory
             "Filled Shape C",
             "Keep the loop self-avoiding while filling this compact connected area.",
             "#22c55e",
+            3,
             new[] { 4, 4, 5, 4, 5, 0, 4, 2, 3, 2, 1, 3, 3, 2, 1, 5, 0, 0, 2 },
             new[] { 4, 4, 5, 4, 4, 5, 3, 2, 3, 2, 1, 3, 3, 3, 2, 0, 1, 1, 3 }),
         new(
@@ -60,6 +65,7 @@ public static class ChapterFactory
             "Filled Shape D",
             "Use the same links to cover a wider filled board.",
             "#8b5cf6",
+            3,
             new[] { 4, 5, 3, 3, 2, 0, 0, 2, 3, 1, 1, 2, 2, 0, 1, 3, 1, 3, 4 },
             new[] { 4, 5, 3, 4, 3, 1, 1, 3, 4, 2, 2, 3, 3, 1, 1, 2, 0, 2, 3 }),
         new(
@@ -68,6 +74,7 @@ public static class ChapterFactory
             "Filled Shape E",
             "Final chapter: a tall filled shape with tighter turns.",
             "#f59e0b",
+            3,
             new[] { 1, 0, 0, 4, 3, 1, 3, 5, 4, 2, 4, 4, 5, 4, 3, 5, 1, 0, 4 },
             new[] { 1, 0, 0, 4, 3, 1, 3, 5, 4, 2, 4, 5, 0, 5, 4, 0, 2, 1, 1 }),
         new(
@@ -76,6 +83,7 @@ public static class ChapterFactory
             "Filled Shape F",
             "A compact filled silhouette with sharper turns.",
             "#14b8a6",
+            3,
             new[] { 1, 3, 4, 4, 0, 1, 1, 0, 4, 4, 4, 4, 4, 2, 4, 5, 0, 4, 0 },
             new[] { 1, 3, 4, 4, 0, 1, 1, 0, 4, 4, 4, 4, 5, 3, 4, 5, 0, 5, 1 }),
         new(
@@ -84,6 +92,7 @@ public static class ChapterFactory
             "Filled Shape G",
             "Stay smooth through the corners while covering every dot.",
             "#ec4899",
+            1,
             new[] { 0, 5, 3, 3, 2, 0, 0, 2, 3, 3, 3, 4, 5, 5, 3, 2, 2, 2, 3 },
             new[] { 0, 5, 3, 3, 2, 0, 0, 2, 3, 3, 3, 3, 4, 4, 2, 1, 1, 1, 2 }),
         new(
@@ -92,6 +101,7 @@ public static class ChapterFactory
             "Filled Shape H",
             "Keep the loop collision-free while filling this shape.",
             "#4b5563",
+            1,
             new[] { 5, 3, 5, 5, 5, 0, 5, 5, 0, 2, 2, 3, 2, 2, 0, 0, 5, 1, 0 },
             new[] { 5, 3, 5, 5, 5, 0, 5, 5, 0, 2, 2, 3, 2, 2, 0, 0, 5, 1, 1 }),
         new(
@@ -100,6 +110,7 @@ public static class ChapterFactory
             "Filled Shape I",
             "Final exam: the most irregular filled board in the set.",
             "#84cc16",
+            3,
             new[] { 5, 5, 5, 1, 0, 1, 3, 5, 3, 4, 2, 2, 2, 1, 2, 0, 0, 1, 2 },
             new[] { 5, 5, 5, 1, 0, 1, 3, 5, 3, 4, 2, 2, 2, 2, 4, 2, 2, 3, 5 })
     };
@@ -160,6 +171,7 @@ public static class ChapterFactory
             blueprint.AccentHex,
             goalState,
             startState,
+            blueprint.OptimalMoves,
             targetPoints: goalState.GetPoints().ToArray());
 
         if (!validate)

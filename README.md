@@ -10,6 +10,7 @@ asks the player to rotate joints until the chain matches the target shape.
 - Smooth drag and keyboard rotation controls.
 - Undo and redo support.
 - Chapter picker with completion tracking.
+- Real per-chapter par counts baked into the shipped level data.
 - Personal best move counts saved locally between sessions.
 - Filled board rendering for target shapes instead of peg-only outlines.
 

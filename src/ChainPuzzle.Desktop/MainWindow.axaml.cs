@@ -228,13 +228,13 @@ public partial class MainWindow : Window
         _progressText.Text = $"{_game.LevelIndex + 1}/{_game.Levels.Count}";
         _completedText.Text = $"{_game.CompletedLevelIds.Count}/{_game.Levels.Count}";
         _movesText.Text = _game.Moves.ToString(CultureInfo.InvariantCulture);
-        _bestText.Text = hasBestRun ? bestMoves.ToString(CultureInfo.InvariantCulture) : "-";
+        _bestText.Text = FormatBestAndParText(level.OptimalMoves, hasBestRun, bestMoves);
 
-        _validationText.Text = BuildBadgeText(hasBestRun, bestMoves);
+        _validationText.Text = BuildBadgeText(level.OptimalMoves, hasBestRun, bestMoves);
         ApplyBadgeStyle(hasBestRun, bestMoves, accentColor);
 
         var solvedStatus = _game.IsSolved && !IsBusy
-            ? BuildSolvedStatus(hasBestRun, bestMoves)
+            ? BuildSolvedStatus(level.OptimalMoves, hasBestRun, bestMoves)
             : _statusMessage;
         _statusText.Text = _selectedJointIndex is null
             ? solvedStatus
@@ -260,7 +260,7 @@ public partial class MainWindow : Window
         _solvedNextButton.Background = accent;
 
         UpdateChapterPickerItems();
-        UpdateSolvedCard(hasBestRun, bestMoves);
+        UpdateSolvedCard(level.OptimalMoves, hasBestRun, bestMoves);
     }
 
     private bool TryRotate(int jointIndex, int rotation)
@@ -381,7 +381,7 @@ public partial class MainWindow : Window
         SaveProgress();
     }
 
-    private void UpdateSolvedCard(bool hasBestRun, int bestMoves)
+    private void UpdateSolvedCard(int optimalMoves, bool hasBestRun, int bestMoves)
     {
         _solvedCard.IsVisible = _game.IsSolved && !IsBusy;
         if (!_solvedCard.IsVisible)
@@ -392,57 +392,72 @@ public partial class MainWindow : Window
         _solvedTitleText.Text = _game.LevelIndex == _game.Levels.Count - 1
             ? "Puzzle Set Complete"
             : $"{_game.CurrentLevel.Subtitle} Solved";
-        _solvedSummaryText.Text = BuildSolvedCardSummary(hasBestRun, bestMoves);
+        _solvedSummaryText.Text = BuildSolvedCardSummary(optimalMoves, hasBestRun, bestMoves);
         _solvedNextButton.IsEnabled = _game.LevelIndex < _game.Levels.Count - 1;
         _solvedNextButton.Content = _game.LevelIndex == _game.Levels.Count - 1
             ? "All Cleared"
             : "Next Chapter";
     }
 
-    private string BuildSolvedCardSummary(bool hasBestRun, int bestMoves)
+    private string BuildSolvedCardSummary(int optimalMoves, bool hasBestRun, int bestMoves)
     {
         var bestClause = hasBestRun
             ? $"Best run: {bestMoves} move{(bestMoves == 1 ? string.Empty : "s")}."
             : "First clear recorded.";
+        var parDelta = _game.Moves - optimalMoves;
+        var parClause = parDelta switch
+        {
+            < 0 => $"You beat par by {-parDelta} move{(-parDelta == 1 ? string.Empty : "s")}.",
+            0 => "You matched par exactly.",
+            _ => $"Par is {optimalMoves}, so this solve was {parDelta} move{(parDelta == 1 ? string.Empty : "s")} over."
+        };
         var completionClause = _game.LevelIndex == _game.Levels.Count - 1
             ? $"You have cleared all {_game.Levels.Count} chapters."
             : "Use Next Chapter to keep the run going.";
 
-        return $"Solved in {_game.Moves} move{(_game.Moves == 1 ? string.Empty : "s")}. {bestClause} {completionClause}";
+        return $"Solved in {_game.Moves} move{(_game.Moves == 1 ? string.Empty : "s")}. {parClause} {bestClause} {completionClause}";
     }
 
-    private string BuildSolvedStatus(bool hasBestRun, int bestMoves)
+    private string BuildSolvedStatus(int optimalMoves, bool hasBestRun, int bestMoves)
     {
+        var parDelta = _game.Moves - optimalMoves;
+        var parText = parDelta switch
+        {
+            < 0 => $"{-parDelta} under par",
+            0 => "matched par",
+            _ => $"{parDelta} over par"
+        };
+
         if (!hasBestRun)
         {
-            return $"Solved in {_game.Moves} moves.";
+            return $"Solved in {_game.Moves} moves, {parText}.";
         }
 
         return _game.Moves == bestMoves
-            ? $"Solved in {_game.Moves} moves. Personal best matched."
-            : $"Solved in {_game.Moves} moves. Best run is {bestMoves}.";
+            ? $"Solved in {_game.Moves} moves, {parText}. Personal best matched."
+            : $"Solved in {_game.Moves} moves, {parText}. Best run is {bestMoves}.";
     }
 
-    private string BuildBadgeText(bool hasBestRun, int bestMoves)
+    private string BuildBadgeText(int optimalMoves, bool hasBestRun, int bestMoves)
     {
         if (_game.IsSolved && !IsBusy && hasBestRun && _game.Moves == bestMoves)
         {
-            return "Personal best";
+            return _game.Moves == optimalMoves ? "Personal best at par" : "Personal best";
         }
 
         if (_game.IsSolved && !IsBusy)
         {
-            return "Chapter cleared";
+            return _game.Moves == optimalMoves ? "Chapter cleared at par" : $"Chapter cleared, par {optimalMoves}";
         }
 
         if (hasBestRun)
         {
-            return $"Best run: {bestMoves} moves";
+            return $"Par {optimalMoves}, best {bestMoves}";
         }
 
         return _game.CompletedLevelIds.Contains(_game.CurrentLevel.Id)
-            ? "Cleared before"
-            : "Fresh chapter";
+            ? $"Cleared before, par {optimalMoves}"
+            : $"Fresh chapter, par {optimalMoves}";
     }
 
     private void ApplyBadgeStyle(bool hasBestRun, int bestMoves, Color accentColor)
@@ -477,13 +492,20 @@ public partial class MainWindow : Window
             {
                 var completedMarker = _game.CompletedLevelIds.Contains(level.Id) ? "[x]" : "[ ]";
                 var bestSuffix = _bestMovesByLevelId.TryGetValue(level.Id, out var best)
-                    ? $"  best {best}"
+                    ? $"  best {best}/{level.OptimalMoves}"
                     : string.Empty;
                 return $"{completedMarker} {index + 1:00}. {level.Subtitle}{bestSuffix}";
             })
             .ToArray();
         _chapterPicker.SelectedIndex = _game.LevelIndex;
         _isSyncingChapterPicker = false;
+    }
+
+    private static string FormatBestAndParText(int optimalMoves, bool hasBestRun, int bestMoves)
+    {
+        return hasBestRun
+            ? $"{bestMoves} / {optimalMoves}"
+            : $"- / {optimalMoves}";
     }
 
     private void PreviousButton_OnClick(object? sender, RoutedEventArgs e)

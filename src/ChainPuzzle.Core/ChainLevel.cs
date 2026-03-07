@@ -12,6 +12,7 @@ public sealed class ChainLevel
         string accentHex,
         ChainState goalState,
         ChainState startState,
+        int optimalMoves,
         LevelValidation? validation = null,
         IReadOnlyList<IntPoint>? targetPoints = null)
     {
@@ -22,6 +23,7 @@ public sealed class ChainLevel
         AccentHex = accentHex;
         GoalState = goalState;
         StartState = startState;
+        OptimalMoves = optimalMoves;
         Validation = validation;
         TargetPoints = targetPoints?.ToArray() ?? goalState.GetPoints().ToArray();
         _targetPointSet = TargetPoints.ToHashSet();
@@ -41,6 +43,8 @@ public sealed class ChainLevel
     public ChainState GoalState { get; }
 
     public ChainState StartState { get; }
+
+    public int OptimalMoves { get; }
 
     public LevelValidation? Validation { get; }
 
@@ -83,6 +87,7 @@ public sealed class ChainLevel
             AccentHex,
             GoalState,
             StartState,
+            OptimalMoves,
             validation,
             TargetPoints);
     }

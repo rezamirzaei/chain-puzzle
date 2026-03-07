@@ -89,6 +89,7 @@ public sealed class ChainCoreTests
 
             Assert.True(path is not null, $"Expected a path for {level.Id}.");
             Assert.NotEmpty(path!);
+            Assert.Equal(level.OptimalMoves, path!.Count);
         }
     }
 
