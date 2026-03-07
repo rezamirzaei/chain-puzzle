@@ -76,7 +76,7 @@
               </Border>
             </Grid>
 
-            <TextBlock Text="Rotate the wooden chain until it matches the filled target silhouette. Shorter solves beat par."
+            <TextBlock Text="Rotate the wooden chain until it covers the filled target silhouette. Only one full cover works, and shorter solves beat par."
                        Margin="0,0,0,18"
                        FontSize="15"
                        Foreground="#475569"

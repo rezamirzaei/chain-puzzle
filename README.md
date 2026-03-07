@@ -1,12 +1,13 @@
 # Chain Chapters (.NET Desktop)
 
 Chain Chapters is a C# desktop chain-puzzle game with chapter progression.
-Each chapter uses the same chain length, starts from a scrambled state, and
-asks the player to rotate joints until the chain matches the target shape.
+Each chapter uses the same chain length, starts from a deceptive scrambled
+state, and asks the player to rotate joints until the chain fully covers the
+target silhouette.
 
 ## Current Features
 
-- 10 handcrafted chapters with distinct filled target shapes and harder six-move starts.
+- 10 handcrafted chapters with distinct filled target shapes, unique full-cover solutions, and deceptive six-move starts.
 - Smooth drag and keyboard rotation controls.
 - Undo and redo support.
 - Chapter picker with completion tracking.
@@ -14,6 +15,7 @@ asks the player to rotate joints until the chain matches the target shape.
 - Personal best move counts saved locally between sessions.
 - Start/menu overlay with continue and clean new-run flow.
 - Filled board rendering for target shapes instead of peg-only outlines.
+- Reverse-shell tuning so most starts already look close to solved but still branch into many wrong continuations.
 
 ## Solution Layout
 

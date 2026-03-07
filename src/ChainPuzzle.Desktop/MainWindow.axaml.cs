@@ -72,7 +72,7 @@ public partial class MainWindow : Window
     private bool _isSyncingChapterPicker;
     private bool _homeOverlayAllowsClose;
     private bool _hasSavedProgress;
-    private string _statusMessage = "Drag a joint to rotate the chain and fit the target shape.";
+    private string _statusMessage = "Drag a joint to rotate the chain and cover the target shape.";
 
     public MainWindow()
     {
@@ -617,7 +617,7 @@ public partial class MainWindow : Window
     {
         _statusMessage = _hasSavedProgress
             ? "Progress restored."
-            : "Pick a joint and start rotating.";
+            : "Pick a joint and start covering the silhouette.";
         HideHomeOverlay();
     }
 

@@ -24,11 +24,7 @@ public sealed class LevelValidator
             maxVisited: MaxVisited);
         var hasSolution = shortestPath is not null;
         var solutionCount = hasSolution
-            ? _solver.CountGoalStates(
-                level.StartState,
-                level.IsSolved,
-                stopAfter: 2,
-                maxVisited: MaxVisited)
+            ? CreateTargetCoverCounter(level).CountSolutions(level.TargetPoints, stopAfter: 2)
             : 0;
 
         return new LevelValidation(
@@ -48,9 +44,14 @@ public sealed class LevelValidator
         if (analysis.SolutionCount != 1)
         {
             throw new InvalidOperationException(
-                $"Level \"{level.Title}\" must have exactly one solution state, found {analysis.SolutionCount}.");
+                $"Level \"{level.Title}\" must have exactly one full-cover solution, found {analysis.SolutionCount}.");
         }
 
         return analysis;
+    }
+
+    private static TargetCoverCounter CreateTargetCoverCounter(ChainLevel level)
+    {
+        return new TargetCoverCounter(level.GoalState.Segments.Select(segment => segment.Length));
     }
 }

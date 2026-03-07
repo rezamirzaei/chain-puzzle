@@ -27,7 +27,6 @@ public sealed class ChainLevel
         Validation = validation;
         TargetPoints = targetPoints?.ToArray() ?? goalState.GetPoints().ToArray();
         _targetPointSet = TargetPoints.ToHashSet();
-        GoalPointSignature = goalState.PointSignature();
     }
 
     public string Id { get; }
@@ -52,15 +51,42 @@ public sealed class ChainLevel
 
     public int SegmentCount => GoalState.SegmentCount;
 
-    private string GoalPointSignature { get; }
-
     public bool IsSolved(ChainState state)
     {
-        return state.PointSignature() == GoalPointSignature;
+        return CoversTarget(state);
+    }
+
+    public bool CoversTarget(ChainState state)
+    {
+        if (state is null)
+        {
+            throw new ArgumentNullException(nameof(state));
+        }
+
+        var points = state.GetPoints();
+        if (points.Count != _targetPointSet.Count)
+        {
+            return false;
+        }
+
+        foreach (var point in points)
+        {
+            if (!_targetPointSet.Contains(point))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public bool IsWithinTarget(ChainState state)
     {
+        if (state is null)
+        {
+            throw new ArgumentNullException(nameof(state));
+        }
+
         foreach (var point in state.GetPoints())
         {
             if (!_targetPointSet.Contains(point))
@@ -70,6 +96,25 @@ public sealed class ChainLevel
         }
 
         return true;
+    }
+
+    public int CountTargetOverlap(ChainState state)
+    {
+        if (state is null)
+        {
+            throw new ArgumentNullException(nameof(state));
+        }
+
+        var overlap = 0;
+        foreach (var point in state.GetPoints())
+        {
+            if (_targetPointSet.Contains(point))
+            {
+                overlap += 1;
+            }
+        }
+
+        return overlap;
     }
 
     public bool IsPlayableState(ChainState state)

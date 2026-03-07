@@ -31,7 +31,7 @@ public static class ChapterFactory
             "#d97706",
             6,
             new[] { 5, 5, 5, 3, 4, 2, 1, 5, 4, 0, 2, 2, 4, 4, 5, 3, 1, 1, 1 },
-            new[] { 5, 1, 3, 2, 3, 1, 0, 4, 3, 5, 0, 0, 2, 2, 3, 1, 5, 5, 5 }),
+            new[] { 5, 5, 5, 3, 4, 2, 1, 5, 4, 0, 2, 2, 4, 4, 3, 1, 1, 3, 3 }),
         new(
             "chapter-02",
             "Chapter 2",
@@ -40,7 +40,7 @@ public static class ChapterFactory
             "#ef4444",
             6,
             new[] { 1, 1, 2, 1, 5, 4, 5, 4, 4, 4, 4, 5, 5, 5, 3, 2, 2, 3, 2 },
-            new[] { 1, 3, 5, 3, 3, 2, 3, 2, 2, 2, 2, 3, 3, 3, 1, 0, 0, 1, 0 }),
+            new[] { 1, 1, 2, 1, 5, 4, 5, 4, 4, 4, 4, 5, 5, 5, 3, 2, 4, 2, 2 }),
         new(
             "chapter-03",
             "Chapter 3",
@@ -49,7 +49,7 @@ public static class ChapterFactory
             "#0ea5e9",
             6,
             new[] { 1, 2, 2, 3, 5, 0, 5, 5, 5, 4, 4, 2, 4, 2, 4, 2, 0, 2, 0 },
-            new[] { 1, 5, 3, 4, 0, 1, 0, 1, 1, 0, 0, 4, 0, 4, 0, 4, 2, 4, 2 }),
+            new[] { 1, 2, 2, 3, 5, 5, 5, 0, 0, 4, 4, 2, 4, 2, 4, 2, 0, 2, 2 }),
         new(
             "chapter-04",
             "Chapter 4",
@@ -58,7 +58,7 @@ public static class ChapterFactory
             "#22c55e",
             6,
             new[] { 4, 4, 5, 4, 5, 0, 4, 2, 3, 2, 1, 3, 3, 2, 1, 5, 0, 0, 2 },
-            new[] { 4, 2, 1, 2, 3, 4, 2, 0, 1, 0, 5, 1, 1, 0, 5, 3, 4, 4, 0 }),
+            new[] { 4, 4, 5, 4, 5, 0, 4, 2, 3, 2, 1, 3, 3, 3, 2, 1, 5, 0, 2 }),
         new(
             "chapter-05",
             "Chapter 5",
@@ -67,7 +67,7 @@ public static class ChapterFactory
             "#8b5cf6",
             6,
             new[] { 4, 5, 3, 3, 2, 0, 0, 2, 3, 1, 1, 2, 2, 0, 1, 3, 1, 3, 4 },
-            new[] { 4, 0, 1, 2, 1, 5, 5, 0, 1, 5, 5, 0, 0, 4, 5, 1, 5, 1, 2 }),
+            new[] { 4, 5, 3, 3, 2, 0, 0, 2, 3, 2, 0, 1, 2, 1, 1, 3, 1, 3, 4 }),
         new(
             "chapter-06",
             "Chapter 6",
@@ -76,7 +76,7 @@ public static class ChapterFactory
             "#f59e0b",
             6,
             new[] { 1, 0, 0, 4, 3, 1, 3, 5, 4, 2, 4, 4, 5, 4, 3, 5, 1, 0, 4 },
-            new[] { 1, 3, 5, 3, 2, 0, 2, 3, 2, 0, 2, 2, 3, 2, 1, 3, 5, 4, 2 }),
+            new[] { 1, 0, 0, 4, 3, 1, 3, 5, 4, 2, 4, 4, 5, 4, 3, 5, 0, 1, 2 }),
         new(
             "chapter-07",
             "Chapter 7",
@@ -85,7 +85,7 @@ public static class ChapterFactory
             "#14b8a6",
             6,
             new[] { 1, 3, 4, 4, 0, 1, 1, 0, 4, 4, 4, 4, 4, 2, 4, 5, 0, 4, 0 },
-            new[] { 1, 5, 5, 5, 1, 2, 2, 2, 0, 0, 0, 0, 0, 4, 0, 1, 2, 0, 2 }),
+            new[] { 1, 3, 4, 4, 5, 1, 1, 1, 5, 4, 4, 4, 4, 2, 4, 5, 0, 4, 4 }),
         new(
             "chapter-08",
             "Chapter 8",
@@ -94,7 +94,7 @@ public static class ChapterFactory
             "#ec4899",
             6,
             new[] { 0, 5, 3, 3, 2, 0, 0, 2, 3, 3, 3, 4, 5, 5, 3, 2, 2, 2, 3 },
-            new[] { 0, 2, 2, 2, 1, 5, 5, 0, 1, 1, 1, 2, 3, 3, 1, 0, 0, 0, 1 }),
+            new[] { 0, 5, 3, 3, 2, 0, 0, 2, 3, 3, 3, 4, 5, 4, 3, 1, 2, 2, 1 }),
         new(
             "chapter-09",
             "Chapter 9",
@@ -103,7 +103,7 @@ public static class ChapterFactory
             "#4b5563",
             6,
             new[] { 5, 3, 5, 5, 5, 0, 5, 5, 0, 2, 2, 3, 2, 2, 0, 0, 5, 1, 0 },
-            new[] { 5, 1, 1, 1, 1, 2, 1, 1, 2, 4, 4, 5, 4, 4, 2, 2, 1, 3, 2 }),
+            new[] { 5, 3, 5, 5, 5, 0, 5, 5, 0, 2, 2, 3, 2, 2, 0, 0, 1, 5, 4 }),
         new(
             "chapter-10",
             "Chapter 10",
@@ -112,7 +112,7 @@ public static class ChapterFactory
             "#84cc16",
             6,
             new[] { 5, 5, 5, 1, 0, 1, 3, 5, 3, 4, 2, 2, 2, 1, 2, 0, 0, 1, 2 },
-            new[] { 5, 3, 1, 2, 1, 2, 4, 0, 4, 5, 4, 4, 4, 3, 4, 2, 2, 3, 4 })
+            new[] { 5, 5, 5, 1, 5, 0, 2, 3, 3, 4, 2, 2, 2, 1, 2, 0, 0, 1, 0 })
     };
 
     public static IReadOnlyList<ChainLevel> CreateChapters(bool validate = false)
@@ -152,9 +152,10 @@ public static class ChapterFactory
             throw new InvalidOperationException($"Level \"{blueprint.Id}\": start state must be self-avoiding.");
         }
 
-        if (goalState.PointSignature() == startState.PointSignature())
+        if (CoversSameTarget(goalState, startState))
         {
-            throw new InvalidOperationException($"Level \"{blueprint.Id}\": start must be different from goal.");
+            throw new InvalidOperationException(
+                $"Level \"{blueprint.Id}\": start must not already cover the target.");
         }
 
         var solver = new ChainSolver(goalState.SegmentCount);
@@ -212,5 +213,25 @@ public static class ChapterFactory
             5 => Direction.SouthEast,
             _ => throw new ArgumentOutOfRangeException(nameof(index), index, "Unsupported direction index.")
         };
+    }
+
+    private static bool CoversSameTarget(ChainState goalState, ChainState startState)
+    {
+        var goalPoints = goalState.GetPoints().ToHashSet();
+        var startPoints = startState.GetPoints();
+        if (goalPoints.Count != startPoints.Count)
+        {
+            return false;
+        }
+
+        foreach (var point in startPoints)
+        {
+            if (!goalPoints.Contains(point))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

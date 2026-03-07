@@ -75,6 +75,7 @@ public sealed class ChainCoreTests
 
             Assert.Equal(goalSet.Count, targetSet.Count);
             Assert.True(goalSet.SetEquals(targetSet));
+            Assert.True(level.IsSolved(level.GoalState));
         }
     }
 
@@ -85,12 +86,48 @@ public sealed class ChainCoreTests
         foreach (var level in levels)
         {
             var solver = new ChainSolver(level.SegmentCount);
-            var path = solver.FindShortestPath(level.StartState, level.IsSolved, maxVisited: 1_000_000);
+            var goalDistances = BuildGoalDistanceMap(solver, level.GoalState, level.OptimalMoves - 1);
+            var startKey = level.StartState.SerializeSegments();
+            var reachesParFrontier = solver.GetLegalMoves(level.StartState)
+                .Any(move => goalDistances.TryGetValue(move.NextState.SerializeSegments(), out var nextDepth)
+                             && nextDepth == level.OptimalMoves - 1);
 
-            Assert.True(path is not null, $"Expected a path for {level.Id}.");
-            Assert.NotEmpty(path!);
-            Assert.True(path!.Count >= 6, $"Expected a hard chapter for {level.Id}, got {path.Count}.");
-            Assert.Equal(level.OptimalMoves, path!.Count);
+            Assert.False(goalDistances.ContainsKey(startKey), $"{level.Id} start is already inside the shorter shell.");
+            Assert.True(reachesParFrontier, $"{level.Id} start does not touch the par frontier.");
+            Assert.True(level.OptimalMoves >= 6, $"Expected a hard chapter for {level.Id}, got {level.OptimalMoves}.");
+        }
+    }
+
+    [Fact]
+    public void ChaptersHaveUniqueTargetCoverSolutions()
+    {
+        var levels = ChapterFactory.CreateChapters(validate: false);
+        foreach (var level in levels)
+        {
+            var counter = new TargetCoverCounter(level.GoalState.Segments.Select(segment => segment.Length));
+            var solutionCount = counter.CountSolutions(level.TargetPoints, stopAfter: 2);
+
+            Assert.Equal(1, solutionCount);
+        }
+    }
+
+    [Fact]
+    public void ChaptersHaveBroadTreesAndDeceptiveStarts()
+    {
+        var levels = ChapterFactory.CreateChapters(validate: false);
+        foreach (var level in levels)
+        {
+            var structure = new LevelStructureAnalyzer(new ChainSolver(level.SegmentCount))
+                .AnalyzeTree(level, shellDepth: 4, nearTargetSlack: 4, maxVisited: 1_000_000);
+
+            Assert.Equal(1, structure.GoalShellCounts[0]);
+            Assert.True(structure.GoalShellCounts[1] >= 9, $"{level.Id} shell-1 width is too small.");
+            Assert.True(structure.GoalShellCounts[2] >= 70, $"{level.Id} shell-2 width is too small.");
+            Assert.True(structure.GoalShellCounts[3] >= 450, $"{level.Id} shell-3 width is too small.");
+            Assert.True(structure.GoalShellCounts[4] >= 2_500, $"{level.Id} shell-4 width is too small.");
+            Assert.True(structure.StartOverlap >= 29, $"{level.Id} start overlap is too low: {structure.StartOverlap}.");
+            Assert.True(structure.StartTrapMoveCount >= 10, $"{level.Id} start has too few trap moves.");
+            Assert.True(structure.StartCloserMoveCount <= 4, $"{level.Id} start has too many obvious improving moves.");
         }
     }
 
@@ -198,6 +235,41 @@ public sealed class ChainCoreTests
         }
 
         return visited.Count == target.Count;
+    }
+
+    private static Dictionary<string, int> BuildGoalDistanceMap(
+        ChainSolver solver,
+        ChainState goalState,
+        int maxDepth)
+    {
+        var map = new Dictionary<string, int>();
+        var queue = new Queue<(ChainState State, int Depth)>();
+        var goalKey = goalState.SerializeSegments();
+        map[goalKey] = 0;
+        queue.Enqueue((goalState, 0));
+
+        while (queue.Count > 0)
+        {
+            var (state, depth) = queue.Dequeue();
+            if (depth >= maxDepth)
+            {
+                continue;
+            }
+
+            foreach (var move in solver.GetLegalMoves(state))
+            {
+                var key = move.NextState.SerializeSegments();
+                if (map.ContainsKey(key))
+                {
+                    continue;
+                }
+
+                map[key] = depth + 1;
+                queue.Enqueue((move.NextState, depth + 1));
+            }
+        }
+
+        return map;
     }
 
     private static int CountInteriorPoints(HashSet<IntPoint> target)
