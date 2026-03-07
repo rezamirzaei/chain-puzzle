@@ -6,7 +6,7 @@
         Height="920"
         MinWidth="980"
         MinHeight="680"
-        Title="Christmas Tree Chain Puzzle"
+        Title="Chain Chapters"
         KeyDown="Window_OnKeyDown">
   <Grid>
     <controls:ChainBoardControl x:Name="Board"
