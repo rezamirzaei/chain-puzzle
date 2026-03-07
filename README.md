@@ -6,12 +6,13 @@ asks the player to rotate joints until the chain matches the target shape.
 
 ## Current Features
 
-- 10 handcrafted chapters with distinct filled target shapes.
+- 10 handcrafted chapters with distinct filled target shapes and harder six-move starts.
 - Smooth drag and keyboard rotation controls.
 - Undo and redo support.
 - Chapter picker with completion tracking.
 - Real per-chapter par counts baked into the shipped level data.
 - Personal best move counts saved locally between sessions.
+- Start/menu overlay with continue and clean new-run flow.
 - Filled board rendering for target shapes instead of peg-only outlines.
 
 ## Solution Layout
@@ -33,6 +34,7 @@ You can also open `Solution2.sln` in Rider/Visual Studio and run `ChainPuzzle.De
 - Mouse: click a joint and drag to rotate.
 - Keyboard: `Up`/`Down` selects a joint, `A`/`D` rotates.
 - History: `Ctrl+Z` undoes, `Ctrl+Y` redoes.
+- Nudge: the in-game `Nudge` button highlights a recommended joint and direction without playing the move.
 - UI: use the chapter picker to jump between chapters.
 
 ## Run Tests

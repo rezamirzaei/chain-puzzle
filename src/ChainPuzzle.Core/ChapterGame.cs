@@ -138,7 +138,7 @@ public sealed class ChapterGame
         var path = solver.FindShortestPath(
             CurrentState,
             CurrentLevel.IsSolved,
-            maxVisited: 60_000);
+            maxVisited: 1_000_000);
         if (path is null || path.Count == 0)
         {
             return null;

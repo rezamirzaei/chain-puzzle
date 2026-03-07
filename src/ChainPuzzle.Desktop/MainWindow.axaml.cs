@@ -32,8 +32,13 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _frameTimer;
 
     private readonly ChainBoardControl _board;
+    private readonly Border _homeOverlay;
     private readonly Border _validationBadge;
     private readonly Border _solvedCard;
+    private readonly TextBlock _homeTitleText;
+    private readonly TextBlock _homeSummaryText;
+    private readonly TextBlock _homeProgressText;
+    private readonly TextBlock _homeBestText;
     private readonly TextBlock _titleText;
     private readonly TextBlock _subtitleText;
     private readonly TextBlock _descriptionText;
@@ -50,10 +55,14 @@ public partial class MainWindow : Window
     private readonly Button _nextButton;
     private readonly Button _undoButton;
     private readonly Button _redoButton;
+    private readonly Button _menuButton;
     private readonly Button _resetButton;
     private readonly Button _hintButton;
     private readonly Button _rotateLeftButton;
     private readonly Button _rotateRightButton;
+    private readonly Button _homePrimaryButton;
+    private readonly Button _homeSecondaryButton;
+    private readonly Button _homeCloseButton;
     private readonly Button _solvedNextButton;
 
     private RotationAnimation? _animation;
@@ -61,6 +70,8 @@ public partial class MainWindow : Window
     private int? _selectedJointIndex;
     private bool _isFindingHint;
     private bool _isSyncingChapterPicker;
+    private bool _homeOverlayAllowsClose;
+    private bool _hasSavedProgress;
     private string _statusMessage = "Drag a joint to rotate the chain and fit the target shape.";
 
     public MainWindow()
@@ -68,8 +79,13 @@ public partial class MainWindow : Window
         InitializeComponent();
 
         _board = GetRequiredControl<ChainBoardControl>("Board");
+        _homeOverlay = GetRequiredControl<Border>("HomeOverlay");
         _validationBadge = GetRequiredControl<Border>("ValidationBadge");
         _solvedCard = GetRequiredControl<Border>("SolvedCard");
+        _homeTitleText = GetRequiredControl<TextBlock>("HomeTitleText");
+        _homeSummaryText = GetRequiredControl<TextBlock>("HomeSummaryText");
+        _homeProgressText = GetRequiredControl<TextBlock>("HomeProgressText");
+        _homeBestText = GetRequiredControl<TextBlock>("HomeBestText");
         _titleText = GetRequiredControl<TextBlock>("TitleText");
         _subtitleText = GetRequiredControl<TextBlock>("SubtitleText");
         _descriptionText = GetRequiredControl<TextBlock>("DescriptionText");
@@ -86,10 +102,14 @@ public partial class MainWindow : Window
         _nextButton = GetRequiredControl<Button>("NextButton");
         _undoButton = GetRequiredControl<Button>("UndoButton");
         _redoButton = GetRequiredControl<Button>("RedoButton");
+        _menuButton = GetRequiredControl<Button>("MenuButton");
         _resetButton = GetRequiredControl<Button>("ResetButton");
         _hintButton = GetRequiredControl<Button>("HintButton");
         _rotateLeftButton = GetRequiredControl<Button>("RotateLeftButton");
         _rotateRightButton = GetRequiredControl<Button>("RotateRightButton");
+        _homePrimaryButton = GetRequiredControl<Button>("HomePrimaryButton");
+        _homeSecondaryButton = GetRequiredControl<Button>("HomeSecondaryButton");
+        _homeCloseButton = GetRequiredControl<Button>("HomeCloseButton");
         _solvedNextButton = GetRequiredControl<Button>("SolvedNextButton");
 
         _game = new ChapterGame(ChapterFactory.CreateChapters());
@@ -101,6 +121,7 @@ public partial class MainWindow : Window
         Closed += (_, _) => SaveProgress();
 
         LoadProgress();
+        ShowHomeOverlay(allowClose: false);
         RefreshHud();
         RenderFrame();
     }
@@ -220,6 +241,7 @@ public partial class MainWindow : Window
         var level = _game.CurrentLevel;
         var accentColor = ParseColor(level.AccentHex, Colors.SteelBlue);
         var hasBestRun = _bestMovesByLevelId.TryGetValue(level.Id, out var bestMoves);
+        var canInteract = !IsBusy && !_homeOverlay.IsVisible;
 
         _titleText.Text = level.Title;
         _subtitleText.Text = level.Subtitle;
@@ -240,15 +262,16 @@ public partial class MainWindow : Window
             ? solvedStatus
             : $"{solvedStatus} Selected joint: {_selectedJointIndex}.";
 
-        _previousButton.IsEnabled = !IsBusy && _game.LevelIndex > 0;
-        _nextButton.IsEnabled = !IsBusy && _game.LevelIndex < _game.Levels.Count - 1;
-        _undoButton.IsEnabled = !IsBusy && _game.CanUndo;
-        _redoButton.IsEnabled = !IsBusy && _game.CanRedo;
-        _resetButton.IsEnabled = !IsBusy;
-        _hintButton.IsEnabled = !IsBusy && !_game.IsSolved;
-        _chapterPicker.IsEnabled = !IsBusy;
+        _previousButton.IsEnabled = canInteract && _game.LevelIndex > 0;
+        _nextButton.IsEnabled = canInteract && _game.LevelIndex < _game.Levels.Count - 1;
+        _undoButton.IsEnabled = canInteract && _game.CanUndo;
+        _redoButton.IsEnabled = canInteract && _game.CanRedo;
+        _menuButton.IsEnabled = !IsBusy;
+        _resetButton.IsEnabled = canInteract;
+        _hintButton.IsEnabled = canInteract && !_game.IsSolved;
+        _chapterPicker.IsEnabled = canInteract;
 
-        var canRotateManually = !IsBusy && !_game.IsSolved && _selectedJointIndex is not null;
+        var canRotateManually = canInteract && !_game.IsSolved && _selectedJointIndex is not null;
         _rotateLeftButton.IsEnabled = canRotateManually;
         _rotateRightButton.IsEnabled = canRotateManually;
 
@@ -261,6 +284,7 @@ public partial class MainWindow : Window
 
         UpdateChapterPickerItems();
         UpdateSolvedCard(level.OptimalMoves, hasBestRun, bestMoves);
+        UpdateHomeOverlay();
     }
 
     private bool TryRotate(int jointIndex, int rotation)
@@ -345,6 +369,10 @@ public partial class MainWindow : Window
             _statusMessage = "Progress restored.";
         }
 
+        _hasSavedProgress = document.CurrentLevelIndex != 0
+            || _game.CompletedLevelIds.Count > 0
+            || _bestMovesByLevelId.Count > 0;
+
         UpdateChapterPickerItems();
     }
 
@@ -352,9 +380,13 @@ public partial class MainWindow : Window
     {
         _progressStore.Save(
             new GameProgressDocument(
+                GameProgressStore.CurrentVersion,
                 _game.LevelIndex,
                 _game.CompletedLevelIds.OrderBy(id => id, StringComparer.Ordinal).ToArray(),
                 new Dictionary<string, int>(_bestMovesByLevelId, StringComparer.Ordinal)));
+        _hasSavedProgress = _game.LevelIndex != 0
+            || _game.CompletedLevelIds.Count > 0
+            || _bestMovesByLevelId.Count > 0;
     }
 
     private bool RecordBestRun()
@@ -397,6 +429,74 @@ public partial class MainWindow : Window
         _solvedNextButton.Content = _game.LevelIndex == _game.Levels.Count - 1
             ? "All Cleared"
             : "Next Chapter";
+    }
+
+    private void UpdateHomeOverlay()
+    {
+        if (!_homeOverlay.IsVisible)
+        {
+            return;
+        }
+
+        var hasRunProgress = _hasSavedProgress
+            || _game.LevelIndex > 0
+            || _game.CompletedLevelIds.Count > 0
+            || _bestMovesByLevelId.Count > 0;
+        var currentChapter = $"{_game.LevelIndex + 1}/{_game.Levels.Count}: {_game.CurrentLevel.Subtitle}";
+
+        _homeTitleText.Text = _homeOverlayAllowsClose
+            ? "Pause Menu"
+            : hasRunProgress
+                ? "Continue Your Run"
+                : "Start A New Run";
+
+        _homeSummaryText.Text = _homeOverlayAllowsClose
+            ? $"Current chapter: {currentChapter}. Resume, jump chapters, or wipe the run and start clean."
+            : hasRunProgress
+                ? $"Progress is loaded and ready. Continue from {currentChapter}, or wipe the board and begin from Chapter 1."
+                : "A fresh puzzle run is ready. Learn the chain on the early boards, then chase par on the later shapes.";
+
+        _homeProgressText.Text = $"{_game.CompletedLevelIds.Count}/{_game.Levels.Count} chapters cleared\nCurrent: {currentChapter}";
+        _homeBestText.Text = _bestMovesByLevelId.Count > 0
+            ? $"{_bestMovesByLevelId.Count} chapters have saved best runs\nPar is tracked on every chapter"
+            : "No best runs stored yet\nPar is tracked on every chapter";
+
+        _homePrimaryButton.Content = _homeOverlayAllowsClose
+            ? "Resume"
+            : hasRunProgress
+                ? "Continue"
+                : "Start Game";
+        _homeSecondaryButton.IsVisible = _homeOverlayAllowsClose || hasRunProgress;
+        _homeCloseButton.IsVisible = _homeOverlayAllowsClose;
+    }
+
+    private void ShowHomeOverlay(bool allowClose)
+    {
+        _homeOverlayAllowsClose = allowClose;
+        _homeOverlay.IsVisible = true;
+        UpdateHomeOverlay();
+    }
+
+    private void HideHomeOverlay()
+    {
+        _homeOverlay.IsVisible = false;
+        _homeOverlayAllowsClose = false;
+        RefreshHud();
+        RenderFrame();
+    }
+
+    private void StartNewRun()
+    {
+        _bestMovesByLevelId.Clear();
+        _game.CompletedLevelIds.Clear();
+        _game.SetLevel(0);
+        _animation = null;
+        _isFindingHint = false;
+        _dragState = null;
+        _selectedJointIndex = null;
+        _statusMessage = "New run started.";
+        SaveProgress();
+        HideHomeOverlay();
     }
 
     private string BuildSolvedCardSummary(int optimalMoves, bool hasBestRun, int bestMoves)
@@ -508,6 +608,29 @@ public partial class MainWindow : Window
             : $"- / {optimalMoves}";
     }
 
+    private static string FormatRotation(int rotation)
+    {
+        return rotation < 0 ? "left" : "right";
+    }
+
+    private void HomePrimaryButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        _statusMessage = _hasSavedProgress
+            ? "Progress restored."
+            : "Pick a joint and start rotating.";
+        HideHomeOverlay();
+    }
+
+    private void HomeSecondaryButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        StartNewRun();
+    }
+
+    private void HomeCloseButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        HideHomeOverlay();
+    }
+
     private void PreviousButton_OnClick(object? sender, RoutedEventArgs e)
     {
         ChangeLevel(_game.LevelIndex - 1);
@@ -554,6 +677,17 @@ public partial class MainWindow : Window
         RenderFrame();
     }
 
+    private void MenuButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (IsBusy)
+        {
+            return;
+        }
+
+        ShowHomeOverlay(allowClose: true);
+        RefreshHud();
+    }
+
     private void ResetButton_OnClick(object? sender, RoutedEventArgs e)
     {
         _game.ResetLevel();
@@ -574,7 +708,7 @@ public partial class MainWindow : Window
         }
 
         _isFindingHint = true;
-        _statusMessage = "Computing hint...";
+        _statusMessage = "Computing nudge...";
         RefreshHud();
 
         ChainMove? hint;
@@ -589,16 +723,15 @@ public partial class MainWindow : Window
 
         if (hint is null)
         {
-            _statusMessage = "No hint available right now.";
+            _statusMessage = "No nudge available right now.";
             RefreshHud();
             return;
         }
 
-        var applied = TryRotate(hint.Value.JointIndex, hint.Value.Rotation);
-        _statusMessage = applied
-            ? "Hint applied: one optimal move executed."
-            : "Hint move blocked.";
+        _selectedJointIndex = hint.Value.JointIndex;
+        _statusMessage = $"Nudge: try joint {hint.Value.JointIndex}, rotate {FormatRotation(hint.Value.Rotation)}.";
         RefreshHud();
+        RenderFrame();
     }
 
     private void RotateLeftButton_OnClick(object? sender, RoutedEventArgs e)
@@ -652,7 +785,7 @@ public partial class MainWindow : Window
 
     private void Board_OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (IsBusy || _game.IsSolved)
+        if (IsBusy || _homeOverlay.IsVisible || _game.IsSolved)
         {
             return;
         }
@@ -688,7 +821,7 @@ public partial class MainWindow : Window
 
     private void Board_OnPointerMoved(object? sender, PointerEventArgs e)
     {
-        if (_dragState is null || IsBusy)
+        if (_dragState is null || IsBusy || _homeOverlay.IsVisible)
         {
             return;
         }
@@ -727,6 +860,32 @@ public partial class MainWindow : Window
 
     private void Window_OnKeyDown(object? sender, KeyEventArgs e)
     {
+        if (_homeOverlay.IsVisible)
+        {
+            if (e.Key == Key.Escape && _homeOverlayAllowsClose)
+            {
+                HideHomeOverlay();
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Key is Key.Enter or Key.Space)
+            {
+                HomePrimaryButton_OnClick(sender, new RoutedEventArgs());
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Key == Key.N && _homeSecondaryButton.IsVisible)
+            {
+                HomeSecondaryButton_OnClick(sender, new RoutedEventArgs());
+                e.Handled = true;
+                return;
+            }
+
+            return;
+        }
+
         if (e.Key == Key.Escape)
         {
             _selectedJointIndex = null;

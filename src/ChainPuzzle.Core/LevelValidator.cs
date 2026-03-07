@@ -2,7 +2,7 @@ namespace ChainPuzzle.Core;
 
 public sealed class LevelValidator
 {
-    private const int MaxVisited = 200_000;
+    private const int MaxVisited = 1_000_000;
 
     private readonly ChainSolver _solver;
 

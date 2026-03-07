@@ -85,10 +85,11 @@ public sealed class ChainCoreTests
         foreach (var level in levels)
         {
             var solver = new ChainSolver(level.SegmentCount);
-            var path = solver.FindShortestPath(level.StartState, level.IsSolved, maxVisited: 60_000);
+            var path = solver.FindShortestPath(level.StartState, level.IsSolved, maxVisited: 1_000_000);
 
             Assert.True(path is not null, $"Expected a path for {level.Id}.");
             Assert.NotEmpty(path!);
+            Assert.True(path!.Count >= 6, $"Expected a hard chapter for {level.Id}, got {path.Count}.");
             Assert.Equal(level.OptimalMoves, path!.Count);
         }
     }

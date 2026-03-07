@@ -14,6 +14,97 @@
                                 PointerMoved="Board_OnPointerMoved"
                                 PointerReleased="Board_OnPointerReleased" />
 
+    <Border x:Name="HomeOverlay"
+            IsVisible="False"
+            Background="#A60F172A">
+      <Grid>
+        <Border Width="640"
+                Padding="26"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Classes="panel">
+          <StackPanel>
+            <TextBlock Text="Chain Puzzle"
+                       FontSize="14"
+                       FontWeight="Bold"
+                       Foreground="#0F766E" />
+            <TextBlock x:Name="HomeTitleText"
+                       Margin="0,10,0,0"
+                       FontSize="42"
+                       FontWeight="SemiBold"
+                       Foreground="#0F172A" />
+            <TextBlock x:Name="HomeSummaryText"
+                       Margin="0,10,0,16"
+                       FontSize="16"
+                       Foreground="#334155"
+                       TextWrapping="Wrap" />
+
+            <Grid ColumnDefinitions="*,*"
+                  ColumnSpacing="10"
+                  Margin="0,0,0,16">
+              <Border Grid.Column="0"
+                      CornerRadius="12"
+                      Background="#F8FAFC"
+                      BorderBrush="#D1D5DB"
+                      BorderThickness="1"
+                      Padding="12">
+                <StackPanel>
+                  <TextBlock Text="Run Status"
+                             FontSize="11"
+                             Foreground="#64748B" />
+                  <TextBlock x:Name="HomeProgressText"
+                             FontSize="16"
+                             FontWeight="Bold"
+                             Foreground="#0F172A" />
+                </StackPanel>
+              </Border>
+              <Border Grid.Column="1"
+                      CornerRadius="12"
+                      Background="#F8FAFC"
+                      BorderBrush="#D1D5DB"
+                      BorderThickness="1"
+                      Padding="12">
+                <StackPanel>
+                  <TextBlock Text="Best Progress"
+                             FontSize="11"
+                             Foreground="#64748B" />
+                  <TextBlock x:Name="HomeBestText"
+                             FontSize="16"
+                             FontWeight="Bold"
+                             Foreground="#0F172A" />
+                </StackPanel>
+              </Border>
+            </Grid>
+
+            <TextBlock Text="Rotate the wooden chain until it matches the filled target silhouette. Shorter solves beat par."
+                       Margin="0,0,0,18"
+                       FontSize="15"
+                       Foreground="#475569"
+                       TextWrapping="Wrap" />
+
+            <Grid ColumnDefinitions="*,*,*"
+                  ColumnSpacing="10">
+              <Button x:Name="HomePrimaryButton"
+                      Grid.Column="0"
+                      Classes="action"
+                      Content="Start Game"
+                      Click="HomePrimaryButton_OnClick" />
+              <Button x:Name="HomeSecondaryButton"
+                      Grid.Column="1"
+                      Classes="action secondary"
+                      Content="New Run"
+                      Click="HomeSecondaryButton_OnClick" />
+              <Button x:Name="HomeCloseButton"
+                      Grid.Column="2"
+                      Classes="action secondary"
+                      Content="Close Menu"
+                      Click="HomeCloseButton_OnClick" />
+            </Grid>
+          </StackPanel>
+        </Border>
+      </Grid>
+    </Border>
+
     <Border x:Name="SolvedCard"
             Width="380"
             Padding="18"
@@ -193,13 +284,17 @@
                   Classes="action secondary"
                   Content="Redo"
                   Click="RedoButton_OnClick" />
+          <Button x:Name="MenuButton"
+                  Classes="action secondary"
+                  Content="Menu"
+                  Click="MenuButton_OnClick" />
           <Button x:Name="ResetButton"
                   Classes="action secondary"
                   Content="Reset"
                   Click="ResetButton_OnClick" />
           <Button x:Name="HintButton"
                   Classes="action"
-                  Content="Hint"
+                  Content="Nudge"
                   Click="HintButton_OnClick" />
           <Button x:Name="RotateLeftButton"
                   Classes="action"
@@ -212,7 +307,7 @@
           <TextBlock Margin="0,6,0,0"
                      TextWrapping="Wrap"
                      Foreground="#475569"
-                     Text="Click near a joint, then drag or use Rotate Left/Right.&#10;Keyboard: Up/Down chooses a joint. A/D rotates. Ctrl+Z undoes, Ctrl+Y redoes." />
+                     Text="Click near a joint, then drag or use Rotate Left/Right.&#10;Keyboard: Up/Down chooses a joint. A/D rotates. Ctrl+Z undoes, Ctrl+Y redoes. Nudge reveals a joint and direction, but does not move it for you." />
         </StackPanel>
       </Border>
     </Grid>

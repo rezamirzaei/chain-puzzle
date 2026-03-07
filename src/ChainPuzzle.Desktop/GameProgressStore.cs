@@ -3,16 +3,19 @@ using System.Text.Json;
 namespace ChainPuzzle.Desktop;
 
 internal sealed record GameProgressDocument(
+    int Version,
     int CurrentLevelIndex,
     string[] CompletedLevelIds,
     Dictionary<string, int> BestMovesByLevelId)
 {
     public static GameProgressDocument Empty { get; } =
-        new(0, Array.Empty<string>(), new Dictionary<string, int>());
+        new(GameProgressStore.CurrentVersion, 0, Array.Empty<string>(), new Dictionary<string, int>());
 }
 
 internal sealed class GameProgressStore
 {
+    public const int CurrentVersion = 3;
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true
@@ -38,8 +41,10 @@ internal sealed class GameProgressStore
             }
 
             using var stream = File.OpenRead(_filePath);
-            return JsonSerializer.Deserialize<GameProgressDocument>(stream, JsonOptions)
-                   ?? GameProgressDocument.Empty;
+            var document = JsonSerializer.Deserialize<GameProgressDocument>(stream, JsonOptions);
+            return document is not null && document.Version == CurrentVersion
+                ? document
+                : GameProgressDocument.Empty;
         }
         catch
         {
