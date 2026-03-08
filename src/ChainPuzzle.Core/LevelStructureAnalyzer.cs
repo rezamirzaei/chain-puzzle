@@ -1,5 +1,9 @@
 namespace ChainPuzzle.Core;
 
+/// <summary>
+/// Produces detailed structural metrics for a level by performing BFS from the goal
+/// and analysing tree breadth, decoy states, and start-state deceptiveness.
+/// </summary>
 public sealed class LevelStructureAnalyzer
 {
     private sealed record DistanceEntry(ChainState State, int Depth);

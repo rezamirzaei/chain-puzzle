@@ -1,5 +1,10 @@
 namespace ChainPuzzle.Core;
 
+/// <summary>
+/// Counts how many distinct ways a chain with given segment lengths can fully cover
+/// a target set of hex-grid points, using back-tracking search.
+/// Used to verify that each puzzle has exactly one solution placement.
+/// </summary>
 public sealed class TargetCoverCounter
 {
     private static readonly Direction[] AllDirections =

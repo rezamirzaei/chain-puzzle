@@ -2,7 +2,12 @@ using System.Text;
 
 namespace ChainPuzzle.Core;
 
-public sealed class ChainState
+/// <summary>
+/// Represents the current spatial configuration of a chain: an ordered sequence of
+/// <see cref="ChainSegment"/> values defining direction and length. Provides point
+/// computation, self-avoidance checks, serialisation, and rotation operations.
+/// </summary>
+public sealed class ChainState : IEquatable<ChainState>
 {
     private readonly ChainSegment[] _segments;
     private IReadOnlyList<IntPoint>? _points;
@@ -12,6 +17,7 @@ public sealed class ChainState
     private int[]? _prefixLengths;
     private string? _segmentSignature;
     private string? _pointSignature;
+    private int? _cachedHashCode;
 
     public ChainState(IEnumerable<ChainSegment> segments)
     {
@@ -317,5 +323,35 @@ public sealed class ChainState
 
         _prefixLengths = prefix;
         return _prefixLengths;
+    }
+
+    /// <summary>Determines structural equality based on segment directions and lengths.</summary>
+    public bool Equals(ChainState? other)
+    {
+        if (other is null) return false;
+        if (ReferenceEquals(this, other)) return true;
+        if (_segments.Length != other._segments.Length) return false;
+        for (var i = 0; i < _segments.Length; i++)
+        {
+            if (_segments[i] != other._segments[i]) return false;
+        }
+        return true;
+    }
+
+    /// <inheritdoc/>
+    public override bool Equals(object? obj) => Equals(obj as ChainState);
+
+    /// <inheritdoc/>
+    public override int GetHashCode()
+    {
+        if (_cachedHashCode.HasValue) return _cachedHashCode.Value;
+        var hash = new HashCode();
+        foreach (var seg in _segments)
+        {
+            hash.Add(seg.Direction);
+            hash.Add(seg.Length);
+        }
+        _cachedHashCode = hash.ToHashCode();
+        return _cachedHashCode.Value;
     }
 }

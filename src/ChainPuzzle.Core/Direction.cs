@@ -1,17 +1,28 @@
 namespace ChainPuzzle.Core;
 
+/// <summary>
+/// The six hex-grid movement directions (pointy-top orientation).
+/// </summary>
 public enum Direction
 {
+    /// <summary>East (+1, 0).</summary>
     East = 0,
+    /// <summary>North-east (+1, −1).</summary>
     NorthEast = 1,
+    /// <summary>North-west (0, −1).</summary>
     NorthWest = 2,
+    /// <summary>West (−1, 0).</summary>
     West = 3,
+    /// <summary>South-west (−1, +1).</summary>
     SouthWest = 4,
+    /// <summary>South-east (0, +1).</summary>
     SouthEast = 5
 }
 
+/// <summary>Extension methods for <see cref="Direction"/>.</summary>
 public static class DirectionExtensions
 {
+    /// <summary>Returns the axial unit vector for this direction.</summary>
     public static IntPoint ToVector(this Direction direction)
     {
         return direction switch
@@ -26,6 +37,7 @@ public static class DirectionExtensions
         };
     }
 
+    /// <summary>Rotates the direction by the given number of 60° steps.</summary>
     public static Direction Rotate(this Direction direction, int steps)
     {
         var next = ((int)direction + steps) % 6;
@@ -37,6 +49,7 @@ public static class DirectionExtensions
         return (Direction)next;
     }
 
+    /// <summary>Parses a single character ('E' or 'W') into a direction.</summary>
     public static Direction Parse(char letter)
     {
         return char.ToUpperInvariant(letter) switch
@@ -47,6 +60,7 @@ public static class DirectionExtensions
         };
     }
 
+    /// <summary>Parses a direction token such as "NE", "SW", "E", etc.</summary>
     public static Direction ParseToken(string token)
     {
         if (string.IsNullOrWhiteSpace(token))
@@ -66,6 +80,7 @@ public static class DirectionExtensions
         };
     }
 
+    /// <summary>Returns a single-character representation used for serialisation.</summary>
     public static char ToLetter(this Direction direction)
     {
         return direction switch

@@ -1,5 +1,9 @@
 namespace ChainPuzzle.Core;
 
+/// <summary>
+/// Manages the game session: tracks the current level, move count, undo/redo history,
+/// completion state, and provides hint computation via <see cref="ChainSolver"/>.
+/// </summary>
 public sealed class ChapterGame
 {
     private sealed record HistoryEntry(ChainState State, int Moves);

@@ -1,5 +1,9 @@
 namespace ChainPuzzle.Core;
 
+/// <summary>
+/// Defines a single puzzle level: a goal state, a start state, a target silhouette,
+/// an optimal move count (par), and metadata such as title and accent colour.
+/// </summary>
 public sealed class ChainLevel
 {
     private readonly HashSet<IntPoint> _targetPointSet;

@@ -5,6 +5,11 @@ using ChainPuzzle.Core;
 
 namespace ChainPuzzle.Desktop.Controls;
 
+/// <summary>
+/// Custom Avalonia control that renders the hex-grid game board:
+/// target silhouette, chain segments, and joint indicators.
+/// Caches brushes and pens to minimize allocation during render.
+/// </summary>
 public sealed class ChainBoardControl : Control
 {
     private const double HexHeight = 0.8660254037844386; // sqrt(3) / 2
@@ -21,6 +26,14 @@ public sealed class ChainBoardControl : Control
     private double _scale = 1d;
     private double _offsetX;
     private double _offsetY;
+
+    // Cached brushes/pens — recreated only when accent or solved state changes.
+    private SolidColorBrush? _targetGlowBrush;
+    private SolidColorBrush? _targetTileBrush;
+    private Pen? _targetTilePen;
+    private SolidColorBrush? _targetHighlightBrush;
+    private Color _cachedAccentForBrushes;
+    private bool _cachedSolvedForBrushes;
 
     public ChainBoardControl()
     {
@@ -205,12 +218,7 @@ public sealed class ChainBoardControl : Control
             return;
         }
 
-        var glowBrush = new SolidColorBrush(Color.FromArgb(_isSolved ? (byte)72 : (byte)48, _accentColor.R, _accentColor.G, _accentColor.B));
-        var tileBrush = new SolidColorBrush(Color.FromArgb(_isSolved ? (byte)220 : (byte)185, _accentColor.R, _accentColor.G, _accentColor.B));
-        var tilePen = new Pen(
-            new SolidColorBrush(Color.FromArgb(_isSolved ? (byte)235 : (byte)205, _accentColor.R, _accentColor.G, _accentColor.B)),
-            1.3);
-        var highlightBrush = new SolidColorBrush(Color.FromArgb(_isSolved ? (byte)70 : (byte)42, 255, 255, 255));
+        EnsureTargetBrushes();
         var glowRadius = _scale * 0.64;
         var tileRadius = _scale * 0.585;
         var highlightRadius = _scale * 0.36;
@@ -218,10 +226,30 @@ public sealed class ChainBoardControl : Control
         foreach (var point in _targetPoints)
         {
             var center = WorldToScreen(point);
-            context.DrawGeometry(glowBrush, null, BuildHexTileGeometry(center, glowRadius));
-            context.DrawGeometry(tileBrush, tilePen, BuildHexTileGeometry(center, tileRadius));
-            context.DrawGeometry(highlightBrush, null, BuildHexTileGeometry(center, highlightRadius));
+            context.DrawGeometry(_targetGlowBrush, null, BuildHexTileGeometry(center, glowRadius));
+            context.DrawGeometry(_targetTileBrush, _targetTilePen, BuildHexTileGeometry(center, tileRadius));
+            context.DrawGeometry(_targetHighlightBrush, null, BuildHexTileGeometry(center, highlightRadius));
         }
+    }
+
+    private void EnsureTargetBrushes()
+    {
+        if (_targetGlowBrush is not null
+            && _cachedAccentForBrushes == _accentColor
+            && _cachedSolvedForBrushes == _isSolved)
+        {
+            return;
+        }
+
+        _cachedAccentForBrushes = _accentColor;
+        _cachedSolvedForBrushes = _isSolved;
+
+        _targetGlowBrush = new SolidColorBrush(Color.FromArgb(_isSolved ? (byte)72 : (byte)48, _accentColor.R, _accentColor.G, _accentColor.B));
+        _targetTileBrush = new SolidColorBrush(Color.FromArgb(_isSolved ? (byte)220 : (byte)185, _accentColor.R, _accentColor.G, _accentColor.B));
+        _targetTilePen = new Pen(
+            new SolidColorBrush(Color.FromArgb(_isSolved ? (byte)235 : (byte)205, _accentColor.R, _accentColor.G, _accentColor.B)),
+            1.3);
+        _targetHighlightBrush = new SolidColorBrush(Color.FromArgb(_isSolved ? (byte)70 : (byte)42, 255, 255, 255));
     }
 
     private void DrawChain(DrawingContext context)

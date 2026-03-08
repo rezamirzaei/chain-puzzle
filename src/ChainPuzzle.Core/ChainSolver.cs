@@ -1,5 +1,10 @@
 namespace ChainPuzzle.Core;
 
+/// <summary>
+/// BFS-based solver for chain puzzles. Enumerates legal moves (single-joint rotations
+/// that preserve self-avoidance), finds shortest paths to goal states, and counts
+/// the number of reachable goal states.
+/// </summary>
 public sealed class ChainSolver
 {
     private sealed record ParentEdge(string FromKey, ChainMove Move);

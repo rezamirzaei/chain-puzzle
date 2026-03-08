@@ -1,5 +1,9 @@
 namespace ChainPuzzle.Core;
 
+/// <summary>
+/// A deterministic pseudo-random number generator seeded by a string.
+/// Uses a linear congruential generator (LCG) for reproducible sequences.
+/// </summary>
 public sealed class SeededRandom
 {
     private uint _state;

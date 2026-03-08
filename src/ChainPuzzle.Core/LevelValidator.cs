@@ -1,5 +1,9 @@
 namespace ChainPuzzle.Core;
 
+/// <summary>
+/// Validates a <see cref="ChainLevel"/> by checking reachability from the start state
+/// and uniqueness of the full-cover solution.
+/// </summary>
 public sealed class LevelValidator
 {
     private const int MaxVisited = 1_000_000;
