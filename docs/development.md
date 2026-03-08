@@ -77,6 +77,8 @@ Tracked values:
 - current chapter index
 - current chain state
 - current move count
+- undo history
+- redo history
 - cleared chapter ids
 - best move count per chapter
 

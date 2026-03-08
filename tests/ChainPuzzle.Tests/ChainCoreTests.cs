@@ -166,6 +166,32 @@ public sealed class ChainCoreTests
     }
 
     [Fact]
+    public void ChapterGameSessionSnapshot_RestoresUndoAndRedoHistory()
+    {
+        var game = new ChapterGame(ChapterFactory.CreateChapters(validate: false));
+        var solver = new ChainSolver(game.CurrentLevel.SegmentCount);
+        var moves = solver.GetLegalMoves(game.CurrentState).Take(2).Select(entry => entry.Move).ToArray();
+
+        Assert.Equal(2, moves.Length);
+        Assert.True(game.TryRotate(moves[0].JointIndex, moves[0].Rotation, out _));
+        Assert.True(game.TryRotate(moves[1].JointIndex, moves[1].Rotation, out _));
+        Assert.True(game.TryUndo());
+
+        var snapshot = game.CreateSessionSnapshot();
+        var restored = new ChapterGame(ChapterFactory.CreateChapters(validate: false));
+
+        Assert.True(restored.TryRestoreSession(snapshot));
+        Assert.Equal(game.CurrentState.SerializeSegments(), restored.CurrentState.SerializeSegments());
+        Assert.Equal(game.Moves, restored.Moves);
+        Assert.Equal(game.CanUndo, restored.CanUndo);
+        Assert.Equal(game.CanRedo, restored.CanRedo);
+
+        Assert.True(restored.TryUndo());
+        Assert.True(restored.TryRedo());
+        Assert.Equal(game.CurrentState.SerializeSegments(), restored.CurrentState.SerializeSegments());
+    }
+
+    [Fact]
     public void ChapterTargetsAreConnectedFilledAreas()
     {
         var levels = ChapterFactory.CreateChapters(validate: false);

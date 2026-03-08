@@ -44,6 +44,10 @@ public sealed class DesktopStateTests
         Assert.Equal(viewModel.LevelIndex, restoredViewModel.LevelIndex);
         Assert.Equal(viewModel.Moves, restoredViewModel.Moves);
         Assert.Equal(viewModel.CurrentState.SerializeSegments(), restoredViewModel.CurrentState.SerializeSegments());
+        Assert.True(restoredViewModel.CanUndo);
+        restoredViewModel.UndoCommand.Execute(null);
+        Assert.Equal(0, restoredViewModel.Moves);
+        Assert.True(restoredViewModel.CanRedo);
     }
 
     [Fact]
@@ -56,6 +60,44 @@ public sealed class DesktopStateTests
 
         Assert.Null(viewModel.SelectedJointIndex);
         Assert.StartsWith("Nudge:", viewModel.StatusMessage, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void GameProgressStore_Load_MigratesVersion4Document()
+    {
+        var rootDirectory = CreateTempDirectory();
+
+        try
+        {
+            File.WriteAllText(Path.Combine(rootDirectory, "progress.json"), """
+                {
+                  "Version": 4,
+                  "CurrentLevelIndex": 2,
+                  "CompletedLevelIds": ["c1", "c2"],
+                  "BestMovesByLevelId": {
+                    "c1": 6
+                  },
+                  "CurrentStatePattern": "E2,A,B3,C,D2,",
+                  "CurrentMoves": 4
+                }
+                """);
+
+            var store = new GameProgressStore(rootDirectory);
+            var document = store.Load();
+
+            Assert.Equal(GameProgressStore.CurrentVersion, document.Version);
+            Assert.Equal(2, document.CurrentLevelIndex);
+            Assert.Equal(4, document.CurrentMoves);
+            Assert.Equal("E2,A,B3,C,D2,", document.CurrentStatePattern);
+            Assert.Empty(document.UndoHistory);
+            Assert.Empty(document.RedoHistory);
+            Assert.Equal(["c1", "c2"], document.CompletedLevelIds);
+            Assert.Equal(6, document.BestMovesByLevelId["c1"]);
+        }
+        finally
+        {
+            Directory.Delete(rootDirectory, recursive: true);
+        }
     }
 
     [Fact]
@@ -83,6 +125,8 @@ public sealed class DesktopStateTests
             Assert.Equal(2, document.CurrentLevelIndex);
             Assert.Equal(0, document.CurrentMoves);
             Assert.Null(document.CurrentStatePattern);
+            Assert.Empty(document.UndoHistory);
+            Assert.Empty(document.RedoHistory);
             Assert.Equal(["c1", "c2"], document.CompletedLevelIds);
             Assert.Equal(6, document.BestMovesByLevelId["c1"]);
         }

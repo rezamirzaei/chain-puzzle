@@ -366,17 +366,26 @@ public sealed partial class GameViewModel : ObservableObject
 
     private bool TryRestoreSavedState(GameProgressDocument document)
     {
-        _game.SetLevel(document.CurrentLevelIndex);
-
-        if (string.IsNullOrWhiteSpace(document.CurrentStatePattern))
-        {
-            return false;
-        }
-
         try
         {
-            var savedState = ChainState.FromPattern(document.CurrentStatePattern);
-            return _game.TryRestoreLevelState(document.CurrentLevelIndex, savedState, document.CurrentMoves);
+            if (string.IsNullOrWhiteSpace(document.CurrentStatePattern))
+            {
+                _game.SetLevel(document.CurrentLevelIndex);
+                return false;
+            }
+
+            var snapshot = new ChapterSessionSnapshot(
+                document.CurrentLevelIndex,
+                ChainState.FromPattern(document.CurrentStatePattern),
+                document.CurrentMoves,
+                document.UndoHistory.Select(frame => new ChapterHistorySnapshot(
+                    ChainState.FromPattern(frame.StatePattern),
+                    frame.Moves)).ToArray(),
+                document.RedoHistory.Select(frame => new ChapterHistorySnapshot(
+                    ChainState.FromPattern(frame.StatePattern),
+                    frame.Moves)).ToArray());
+
+            return _game.TryRestoreSession(snapshot);
         }
         catch
         {
@@ -484,13 +493,20 @@ public sealed partial class GameViewModel : ObservableObject
 
     private void SaveProgress()
     {
+        var snapshot = _game.CreateSessionSnapshot();
         _progressStore.Save(new GameProgressDocument(
             GameProgressStore.CurrentVersion,
-            LevelIndex,
+            snapshot.LevelIndex,
             _game.CompletedLevelIds.OrderBy(id => id, StringComparer.Ordinal).ToArray(),
             new Dictionary<string, int>(_bestMovesByLevelId, StringComparer.Ordinal),
-            CurrentState.SerializeSegments(),
-            Moves));
+            snapshot.CurrentState.SerializeSegments(),
+            snapshot.Moves,
+            snapshot.UndoHistory.Select(frame => new SavedHistoryStateDocument(
+                frame.State.SerializeSegments(),
+                frame.Moves)).ToArray(),
+            snapshot.RedoHistory.Select(frame => new SavedHistoryStateDocument(
+                frame.State.SerializeSegments(),
+                frame.Moves)).ToArray()));
         _hasSavedProgress = HasSavedRunData;
     }
 

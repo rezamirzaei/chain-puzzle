@@ -12,7 +12,7 @@ non-solved state.
 - exact per-chapter par counts
 - chapter gallery with silhouette previews and medal tracking
 - drag controls, keyboard controls, undo/redo, and text-only or highlighted nudges
-- local save data for exact in-progress boards, chapter progress, and best runs
+- local save data for exact in-progress boards, undo/redo history, chapter progress, and best runs
 - local settings for animation speed, hint highlighting, and feedback beeps
 
 ## Runtime Architecture
@@ -60,8 +60,8 @@ dotnet run --project src/ChainPuzzle.Desktop/ChainPuzzle.Desktop.csproj
 The desktop app stores local data under the user application data folder in a
 `ChainPuzzle` directory:
 
-- `progress.json` — current chapter, cleared chapters, and best runs
-- `progress.json` also stores the current board state and move count, so `Continue` restores the exact puzzle you left
+- `progress.json` — current chapter, current board, move count, undo/redo history, cleared chapters, and best runs
+- `Continue` restores the exact puzzle state you left, including available undo and redo actions
 - `settings.json` — animation speed, nudge highlight preference, and feedback beep setting
 
 ## Testing

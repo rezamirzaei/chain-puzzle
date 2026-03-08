@@ -9,12 +9,24 @@ internal sealed record GameProgressDocument(
     string[] CompletedLevelIds,
     Dictionary<string, int> BestMovesByLevelId,
     string? CurrentStatePattern,
-    int CurrentMoves)
+    int CurrentMoves,
+    SavedHistoryStateDocument[] UndoHistory,
+    SavedHistoryStateDocument[] RedoHistory)
 {
     /// <summary>An empty document with default values.</summary>
     public static GameProgressDocument Empty { get; } =
-        new(GameProgressStore.CurrentVersion, 0, Array.Empty<string>(), new Dictionary<string, int>(), null, 0);
+        new(
+            GameProgressStore.CurrentVersion,
+            0,
+            Array.Empty<string>(),
+            new Dictionary<string, int>(),
+            null,
+            0,
+            Array.Empty<SavedHistoryStateDocument>(),
+            Array.Empty<SavedHistoryStateDocument>());
 }
+
+internal sealed record SavedHistoryStateDocument(string StatePattern, int Moves);
 
 /// <summary>Reads and writes game progress (chapter index, board state, clears, best moves) to a local JSON file.</summary>
 internal sealed class GameProgressStore : IGameProgressStore
@@ -25,7 +37,15 @@ internal sealed class GameProgressStore : IGameProgressStore
         string[] CompletedLevelIds,
         Dictionary<string, int> BestMovesByLevelId);
 
-    public const int CurrentVersion = 4;
+    private sealed record LegacyGameProgressDocumentV4(
+        int Version,
+        int CurrentLevelIndex,
+        string[] CompletedLevelIds,
+        Dictionary<string, int> BestMovesByLevelId,
+        string? CurrentStatePattern,
+        int CurrentMoves);
+
+    public const int CurrentVersion = 5;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -64,6 +84,7 @@ internal sealed class GameProgressStore : IGameProgressStore
             return versionElement.GetInt32() switch
             {
                 CurrentVersion => Normalize(JsonSerializer.Deserialize<GameProgressDocument>(json, JsonOptions)),
+                4 => MigrateFromV4(JsonSerializer.Deserialize<LegacyGameProgressDocumentV4>(json, JsonOptions)),
                 3 => MigrateFromV3(JsonSerializer.Deserialize<LegacyGameProgressDocumentV3>(json, JsonOptions)),
                 _ => GameProgressDocument.Empty
             };
@@ -101,7 +122,29 @@ internal sealed class GameProgressStore : IGameProgressStore
                 ? new Dictionary<string, int>()
                 : new Dictionary<string, int>(legacy.BestMovesByLevelId, StringComparer.Ordinal),
             null,
-            0);
+            0,
+            Array.Empty<SavedHistoryStateDocument>(),
+            Array.Empty<SavedHistoryStateDocument>());
+    }
+
+    private static GameProgressDocument MigrateFromV4(LegacyGameProgressDocumentV4? legacy)
+    {
+        if (legacy is null)
+        {
+            return GameProgressDocument.Empty;
+        }
+
+        return new GameProgressDocument(
+            CurrentVersion,
+            Math.Max(0, legacy.CurrentLevelIndex),
+            legacy.CompletedLevelIds ?? Array.Empty<string>(),
+            legacy.BestMovesByLevelId is null
+                ? new Dictionary<string, int>()
+                : new Dictionary<string, int>(legacy.BestMovesByLevelId, StringComparer.Ordinal),
+            string.IsNullOrWhiteSpace(legacy.CurrentStatePattern) ? null : legacy.CurrentStatePattern,
+            Math.Max(0, legacy.CurrentMoves),
+            Array.Empty<SavedHistoryStateDocument>(),
+            Array.Empty<SavedHistoryStateDocument>());
     }
 
     private static GameProgressDocument Normalize(GameProgressDocument? document)
@@ -119,6 +162,21 @@ internal sealed class GameProgressStore : IGameProgressStore
                 ? new Dictionary<string, int>()
                 : new Dictionary<string, int>(document.BestMovesByLevelId, StringComparer.Ordinal),
             string.IsNullOrWhiteSpace(document.CurrentStatePattern) ? null : document.CurrentStatePattern,
-            Math.Max(0, document.CurrentMoves));
+            Math.Max(0, document.CurrentMoves),
+            NormalizeHistory(document.UndoHistory),
+            NormalizeHistory(document.RedoHistory));
+    }
+
+    private static SavedHistoryStateDocument[] NormalizeHistory(SavedHistoryStateDocument[]? history)
+    {
+        if (history is null || history.Length == 0)
+        {
+            return Array.Empty<SavedHistoryStateDocument>();
+        }
+
+        return history
+            .Where(item => item is not null && !string.IsNullOrWhiteSpace(item.StatePattern))
+            .Select(item => new SavedHistoryStateDocument(item.StatePattern, Math.Max(0, item.Moves)))
+            .ToArray();
     }
 }

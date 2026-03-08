@@ -97,6 +97,54 @@ public sealed class ChapterGame
         return true;
     }
 
+    public ChapterSessionSnapshot CreateSessionSnapshot()
+    {
+        return new ChapterSessionSnapshot(
+            LevelIndex,
+            CurrentState.Clone(),
+            Moves,
+            _undoHistory
+                .Select(entry => new ChapterHistorySnapshot(entry.State.Clone(), entry.Moves))
+                .ToArray(),
+            _redoHistory
+                .Select(entry => new ChapterHistorySnapshot(entry.State.Clone(), entry.Moves))
+                .ToArray());
+    }
+
+    public bool TryRestoreSession(ChapterSessionSnapshot snapshot)
+    {
+        if (snapshot is null)
+        {
+            throw new ArgumentNullException(nameof(snapshot));
+        }
+
+        LevelIndex = Math.Clamp(snapshot.LevelIndex, 0, Levels.Count - 1);
+        _undoHistory.Clear();
+        _redoHistory.Clear();
+
+        if (snapshot.Moves < 0 || !IsCompatibleState(snapshot.CurrentState))
+        {
+            ResetLevel();
+            return false;
+        }
+
+        if (!TryLoadHistory(snapshot.UndoHistory, _undoHistory) || !TryLoadHistory(snapshot.RedoHistory, _redoHistory))
+        {
+            ResetLevel();
+            return false;
+        }
+
+        CurrentState = snapshot.CurrentState.Clone();
+        Moves = snapshot.Moves;
+
+        if (IsSolved)
+        {
+            CompletedLevelIds.Add(CurrentLevel.Id);
+        }
+
+        return true;
+    }
+
     public bool TryRotate(int jointIndex, int rotation, out ChainState nextState)
     {
         nextState = CurrentState;
@@ -205,6 +253,28 @@ public sealed class ChapterGame
             {
                 return false;
             }
+        }
+
+        return true;
+    }
+
+    private bool TryLoadHistory(
+        IReadOnlyList<ChapterHistorySnapshot> history,
+        Stack<HistoryEntry> destination)
+    {
+        ArgumentNullException.ThrowIfNull(history);
+        ArgumentNullException.ThrowIfNull(destination);
+
+        for (var index = history.Count - 1; index >= 0; index -= 1)
+        {
+            var frame = history[index];
+            if (frame is null || frame.Moves < 0 || !IsCompatibleState(frame.State))
+            {
+                destination.Clear();
+                return false;
+            }
+
+            destination.Push(new HistoryEntry(frame.State.Clone(), frame.Moves));
         }
 
         return true;
