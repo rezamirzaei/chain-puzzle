@@ -39,6 +39,9 @@ public partial class MainWindow : Window
 
     private readonly ChainBoardControl _board;
     private readonly Border _homeOverlay;
+    private readonly Border _boardReadCard;
+    private readonly Border _selectionCard;
+    private readonly Border _statusCard;
     private readonly Border _validationBadge;
     private readonly Border _solvedCard;
     private readonly WrapPanel _homeChapterGallery;
@@ -60,6 +63,8 @@ public partial class MainWindow : Window
     private readonly TextBlock _bestText;
     private readonly TextBlock _difficultyText;
     private readonly TextBlock _modeText;
+    private readonly TextBlock _boardReadText;
+    private readonly TextBlock _selectionText;
     private readonly TextBlock _validationText;
     private readonly TextBlock _approachText;
     private readonly TextBlock _statusText;
@@ -93,6 +98,9 @@ public partial class MainWindow : Window
 
         _board = GetRequiredControl<ChainBoardControl>("Board");
         _homeOverlay = GetRequiredControl<Border>("HomeOverlay");
+        _boardReadCard = GetRequiredControl<Border>("BoardReadCard");
+        _selectionCard = GetRequiredControl<Border>("SelectionCard");
+        _statusCard = GetRequiredControl<Border>("StatusCard");
         _validationBadge = GetRequiredControl<Border>("ValidationBadge");
         _solvedCard = GetRequiredControl<Border>("SolvedCard");
         _homeChapterGallery = GetRequiredControl<WrapPanel>("HomeChapterGallery");
@@ -114,6 +122,8 @@ public partial class MainWindow : Window
         _bestText = GetRequiredControl<TextBlock>("BestText");
         _difficultyText = GetRequiredControl<TextBlock>("DifficultyText");
         _modeText = GetRequiredControl<TextBlock>("ModeText");
+        _boardReadText = GetRequiredControl<TextBlock>("BoardReadText");
+        _selectionText = GetRequiredControl<TextBlock>("SelectionText");
         _validationText = GetRequiredControl<TextBlock>("ValidationText");
         _approachText = GetRequiredControl<TextBlock>("ApproachText");
         _statusText = GetRequiredControl<TextBlock>("StatusText");
@@ -163,6 +173,8 @@ public partial class MainWindow : Window
         _bestText.Text = _vm.BestText;
         _difficultyText.Text = _vm.DifficultyText;
         _modeText.Text = _vm.ModeText;
+        _boardReadText.Text = _vm.BoardReadText;
+        _selectionText.Text = _vm.SelectionText;
         _validationText.Text = _vm.BadgeText;
         _approachText.Text = _vm.ApproachText;
         _statusText.Text = _vm.StatusText;
@@ -170,6 +182,11 @@ public partial class MainWindow : Window
         _validationBadge.Background = new SolidColorBrush(ParseColor(_vm.BadgeBg, Colors.Transparent));
         _validationBadge.BorderBrush = new SolidColorBrush(ParseColor(_vm.BadgeBorder, Colors.Transparent));
         _validationText.Foreground = new SolidColorBrush(ParseColor(_vm.BadgeFg, accent));
+        _selectionCard.Background = new SolidColorBrush(Color.FromArgb(28, accent.R, accent.G, accent.B));
+        _selectionCard.BorderBrush = new SolidColorBrush(Color.FromArgb(76, accent.R, accent.G, accent.B));
+        _statusCard.Background = new SolidColorBrush(Color.FromArgb(22, accent.R, accent.G, accent.B));
+        _statusCard.BorderBrush = new SolidColorBrush(Color.FromArgb(58, accent.R, accent.G, accent.B));
+        _boardReadCard.BorderBrush = new SolidColorBrush(Color.FromArgb(34, accent.R, accent.G, accent.B));
 
         _homeOverlay.IsVisible = _vm.IsHomeVisible;
         _homeTitleText.Text = _vm.HomeTitle;
@@ -253,6 +270,50 @@ public partial class MainWindow : Window
         };
         preview.UpdatePreview(card.TargetPoints, card.AccentHex, card.IsCurrent);
 
+        var difficultyChip = new Border
+        {
+            Background = new SolidColorBrush(Color.FromArgb(28, accent.R, accent.G, accent.B)),
+            BorderBrush = new SolidColorBrush(Color.FromArgb(60, accent.R, accent.G, accent.B)),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(999),
+            Margin = new Thickness(0, 0, 6, 6),
+            Padding = new Thickness(8, 3),
+            Child = new TextBlock
+            {
+                Text = card.DifficultyText,
+                FontSize = 11,
+                FontWeight = FontWeight.Bold,
+                Foreground = accentBrush
+            }
+        };
+
+        var methodChip = new Border
+        {
+            Background = new SolidColorBrush(Color.FromArgb(255, 248, 250, 252)),
+            BorderBrush = new SolidColorBrush(Color.FromArgb(255, 203, 213, 225)),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(999),
+            Margin = new Thickness(0, 0, 0, 6),
+            Padding = new Thickness(8, 3),
+            Child = new TextBlock
+            {
+                Text = card.MethodText,
+                FontSize = 11,
+                FontWeight = FontWeight.SemiBold,
+                Foreground = mutedBrush
+            }
+        };
+
+        var chipRow = new WrapPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Children =
+            {
+                difficultyChip,
+                methodChip
+            }
+        };
+
         var header = new Grid
         {
             ColumnDefinitions = new ColumnDefinitions("*,Auto"),
@@ -288,7 +349,7 @@ public partial class MainWindow : Window
 
         var cardContent = new StackPanel
         {
-            Spacing = 8,
+            Spacing = 10,
             Children =
             {
                 header,
@@ -296,9 +357,11 @@ public partial class MainWindow : Window
                 {
                     Text = card.Subtitle,
                     FontSize = 18,
+                    FontFamily = "Georgia",
                     FontWeight = FontWeight.SemiBold,
                     Foreground = titleBrush
                 },
+                chipRow,
                 new Border
                 {
                     Background = new SolidColorBrush(Color.FromArgb(12, accent.R, accent.G, accent.B)),
@@ -308,17 +371,40 @@ public partial class MainWindow : Window
                     Padding = new Thickness(6),
                     Child = preview
                 },
-                new TextBlock
+                new Border
                 {
-                    Text = card.BestText,
-                    FontSize = 13,
-                    FontWeight = FontWeight.Bold,
-                    Foreground = titleBrush
+                    Background = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255)),
+                    BorderBrush = new SolidColorBrush(Color.FromArgb(255, 226, 232, 240)),
+                    BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(12),
+                    Padding = new Thickness(10, 8),
+                    Child = new StackPanel
+                    {
+                        Spacing = 3,
+                        Children =
+                        {
+                            new TextBlock
+                            {
+                                Text = "Best Line",
+                                FontSize = 10,
+                                FontWeight = FontWeight.Bold,
+                                Foreground = mutedBrush
+                            },
+                            new TextBlock
+                            {
+                                Text = card.BestText,
+                                FontSize = 13,
+                                FontWeight = FontWeight.Bold,
+                                Foreground = titleBrush
+                            }
+                        }
+                    }
                 },
                 new TextBlock
                 {
                     Text = card.PressureText,
                     FontSize = 12,
+                    FontWeight = FontWeight.SemiBold,
                     Foreground = mutedBrush
                 },
                 new TextBlock
@@ -338,7 +424,7 @@ public partial class MainWindow : Window
             BorderBrush = borderBrush,
             BorderThickness = new Thickness(card.IsCurrent ? 2 : 1),
             CornerRadius = new CornerRadius(16),
-            Padding = new Thickness(12),
+            Padding = new Thickness(14),
             HorizontalContentAlignment = HorizontalAlignment.Stretch,
             VerticalContentAlignment = VerticalAlignment.Stretch,
             Content = cardContent

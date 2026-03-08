@@ -88,11 +88,32 @@ public sealed class ShapePreviewControl : Control
 
     private void DrawBackground(DrawingContext context)
     {
-        var tint = Color.FromArgb(_isCurrent ? (byte)34 : (byte)20, _accentColor.R, _accentColor.G, _accentColor.B);
-        context.DrawRectangle(
-            new SolidColorBrush(tint),
+        var mist = Mix(_accentColor, Colors.White, 0.88);
+        var wash = Mix(_accentColor, ParseColor("#F59E0B", Colors.Goldenrod), 0.22);
+        var background = new LinearGradientBrush
+        {
+            StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
+            EndPoint = new RelativePoint(1, 1, RelativeUnit.Relative),
+            GradientStops = new GradientStops
+            {
+                new GradientStop(Color.FromArgb(255, mist.R, mist.G, mist.B), 0),
+                new GradientStop(Color.FromArgb(255, wash.R, wash.G, wash.B), 1)
+            }
+        };
+
+        context.DrawRectangle(background, null, new Rect(0, 0, Bounds.Width, Bounds.Height));
+        context.DrawEllipse(
+            new SolidColorBrush(Color.FromArgb(_isCurrent ? (byte)48 : (byte)28, _accentColor.R, _accentColor.G, _accentColor.B)),
             null,
-            new Rect(0, 0, Bounds.Width, Bounds.Height));
+            new Point(Bounds.Width * 0.26, Bounds.Height * 0.24),
+            Bounds.Width * 0.22,
+            Bounds.Width * 0.22);
+        context.DrawEllipse(
+            new SolidColorBrush(Color.FromArgb(_isCurrent ? (byte)40 : (byte)22, wash.R, wash.G, wash.B)),
+            null,
+            new Point(Bounds.Width * 0.78, Bounds.Height * 0.74),
+            Bounds.Width * 0.2,
+            Bounds.Width * 0.2);
     }
 
     private void DrawTarget(DrawingContext context)
@@ -102,12 +123,13 @@ public sealed class ShapePreviewControl : Control
             return;
         }
 
-        var tileBrush = new SolidColorBrush(Color.FromArgb(212, _accentColor.R, _accentColor.G, _accentColor.B));
+        var warmAccent = Mix(_accentColor, ParseColor("#F59E0B", Colors.Goldenrod), 0.18);
+        var tileBrush = new SolidColorBrush(Color.FromArgb(218, warmAccent.R, warmAccent.G, warmAccent.B));
         var tilePen = new Pen(
             new SolidColorBrush(Color.FromArgb(235, 255, 255, 255)),
             _isCurrent ? 1.6 : 1.1);
         var highlightBrush = new SolidColorBrush(Color.FromArgb(46, 255, 255, 255));
-        var glowBrush = new SolidColorBrush(Color.FromArgb(_isCurrent ? (byte)54 : (byte)34, _accentColor.R, _accentColor.G, _accentColor.B));
+        var glowBrush = new SolidColorBrush(Color.FromArgb(_isCurrent ? (byte)60 : (byte)36, _accentColor.R, _accentColor.G, _accentColor.B));
 
         var glowRadius = _scale * 0.58;
         var tileRadius = _scale * 0.51;
@@ -186,6 +208,18 @@ public sealed class ShapePreviewControl : Control
         return Color.TryParse(hexColor, out var parsedColor)
             ? parsedColor
             : fallback;
+    }
+
+    private static Color Mix(Color left, Color right, double amount)
+    {
+        var clamped = Math.Clamp(amount, 0d, 1d);
+        static byte Blend(byte a, byte b, double t) => (byte)Math.Clamp(Math.Round(a + ((b - a) * t)), 0, 255);
+
+        return Color.FromArgb(
+            Blend(left.A, right.A, clamped),
+            Blend(left.R, right.R, clamped),
+            Blend(left.G, right.G, clamped),
+            Blend(left.B, right.B, clamped));
     }
 
     private static Point Project(Point worldPoint)

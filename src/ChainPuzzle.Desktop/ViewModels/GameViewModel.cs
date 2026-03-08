@@ -16,6 +16,7 @@ public sealed partial class GameViewModel : ObservableObject
     private readonly IGameProgressStore _progressStore;
     private readonly ISettingsStore _settingsStore;
     private readonly Dictionary<string, int> _bestMovesByLevelId = new(StringComparer.Ordinal);
+    private readonly Dictionary<int, ChainSolver> _analysisSolvers = new();
     private bool _isLoadingSettings;
 
     [ObservableProperty]
@@ -106,6 +107,8 @@ public sealed partial class GameViewModel : ObservableObject
     [ObservableProperty] private string _statusText = "";
     [ObservableProperty] private string _difficultyText = "";
     [ObservableProperty] private string _modeText = "";
+    [ObservableProperty] private string _boardReadText = "";
+    [ObservableProperty] private string _selectionText = "";
     [ObservableProperty] private string _approachText = "";
     [ObservableProperty] private string _accentHex = "#0F766E";
 
@@ -144,6 +147,23 @@ public sealed partial class GameViewModel : ObservableObject
         || _game.CompletedLevelIds.Count > 0
         || _bestMovesByLevelId.Count > 0;
 
+    private sealed record StateInsight(
+        int TargetSize,
+        int Overlap,
+        int MisplacedCount,
+        int LegalMoves,
+        int ImprovingMoves,
+        int NeutralMoves,
+        int RiskyMoves,
+        int BestGain,
+        int ContainedMoves);
+
+    private sealed record RotationReadout(
+        bool IsBlocked,
+        int OverlapDelta,
+        int LegalMoveDelta,
+        bool EndsInsideTarget);
+
     /// <summary>Animation duration in milliseconds, based on the current speed setting.</summary>
     public int AnimationDurationMs => AnimationSpeed switch
     {
@@ -160,14 +180,15 @@ public sealed partial class GameViewModel : ObservableObject
     public bool TryRotate(int jointIndex, int rotation)
     {
         if (IsBusy || IsSolved) return false;
-        if (!_game.TryRotate(jointIndex, rotation, out _))
+        var previousState = CurrentState;
+        if (!_game.TryRotate(jointIndex, rotation, out var nextState))
         {
-            StatusMessage = "Move blocked by chain collision.";
+            StatusMessage = BuildBlockedMoveStatus(previousState);
             RefreshAll();
             return false;
         }
 
-        StatusMessage = $"Moved joint {jointIndex}.";
+        StatusMessage = BuildRotationStatus(jointIndex, rotation, previousState, nextState);
         SaveProgress();
         RefreshAll();
         return true;
@@ -194,11 +215,11 @@ public sealed partial class GameViewModel : ObservableObject
     {
         StatusMessage = ExpertMode
             ? _hasSavedProgress
-                ? "Expert run restored."
-                : "Expert run started. No undo, redo, or nudge."
+                ? $"Expert run restored. {BuildCompactStateSummary(CurrentState)}"
+                : $"Expert run started. {BuildOpeningStatus(CurrentLevel)}"
             : _hasSavedProgress
-                ? "Progress restored."
-                : "Pick a joint and start covering the silhouette.";
+                ? $"Progress restored. {BuildCompactStateSummary(CurrentState)}"
+                : BuildOpeningStatus(CurrentLevel);
         HideHome();
     }
 
@@ -225,7 +246,7 @@ public sealed partial class GameViewModel : ObservableObject
         }
 
         if (IsBusy || !_game.TryUndo()) return;
-        StatusMessage = "Undid the last move.";
+        StatusMessage = $"Step undone. {BuildCompactStateSummary(CurrentState)}";
         SaveProgress();
         RefreshAll();
     }
@@ -242,7 +263,7 @@ public sealed partial class GameViewModel : ObservableObject
 
         if (IsBusy || !_game.TryRedo()) return;
         if (IsSolved) FinalizeSolvedState();
-        else StatusMessage = "Replayed the move.";
+        else StatusMessage = $"Move replayed. {BuildCompactStateSummary(CurrentState)}";
         SaveProgress();
         RefreshAll();
     }
@@ -252,7 +273,7 @@ public sealed partial class GameViewModel : ObservableObject
     {
         _game.ResetLevel();
         SelectedJointIndex = null;
-        StatusMessage = "Chapter reset.";
+        StatusMessage = $"{CurrentLevel.Subtitle} reset. {BuildOpeningStatus(CurrentLevel)}";
         SaveProgress();
         RefreshAll();
     }
@@ -293,7 +314,9 @@ public sealed partial class GameViewModel : ObservableObject
             {
                 SelectedJointIndex = hint.Value.JointIndex;
             }
-            StatusMessage = $"Nudge: try joint {hint.Value.JointIndex}, rotate {FormatRotation(hint.Value.Rotation)}.";
+
+            var readout = AnalyzeRotation(CurrentLevel, CurrentState, hint.Value.JointIndex, hint.Value.Rotation);
+            StatusMessage = $"Nudge: joint {hint.Value.JointIndex}, rotate {FormatRotation(hint.Value.Rotation)}. {BuildRotationOutcomeText(readout)}";
         }
 
         RefreshAll();
@@ -341,14 +364,17 @@ public sealed partial class GameViewModel : ObservableObject
         }
 
         HideHome();
-        StatusMessage = $"Jumped to {CurrentLevel.Subtitle}.";
+        StatusMessage = $"Jumped to {CurrentLevel.Subtitle}. {BuildOpeningStatus(CurrentLevel)}";
         RefreshAll();
     }
 
     public void SelectJoint(int? jointIndex)
     {
         SelectedJointIndex = jointIndex;
-        if (jointIndex.HasValue) StatusMessage = $"Joint {jointIndex.Value} selected.";
+        if (jointIndex.HasValue)
+        {
+            StatusMessage = $"Joint {jointIndex.Value} selected. Preview both directions before committing.";
+        }
         RefreshAll();
     }
 
@@ -370,7 +396,7 @@ public sealed partial class GameViewModel : ObservableObject
     {
         _game.SetLevel(nextIndex);
         SelectedJointIndex = null;
-        StatusMessage = status ?? $"{CurrentLevel.Subtitle} loaded.";
+        StatusMessage = status ?? $"{CurrentLevel.Subtitle} loaded. {BuildOpeningStatus(CurrentLevel)}";
         SaveProgress();
         RefreshAll();
     }
@@ -396,8 +422,8 @@ public sealed partial class GameViewModel : ObservableObject
         _game.SetLevel(0);
         SelectedJointIndex = null;
         StatusMessage = ExpertMode
-            ? "New expert run started."
-            : "New run started.";
+            ? $"New expert run started. {BuildOpeningStatus(CurrentLevel)}"
+            : $"New run started. {BuildOpeningStatus(CurrentLevel)}";
         SaveProgress();
         HideHome();
     }
@@ -592,6 +618,8 @@ public sealed partial class GameViewModel : ObservableObject
         var level = CurrentLevel;
         var hasBest = _bestMovesByLevelId.TryGetValue(level.Id, out var bestMoves);
         var difficultyLabel = BuildDifficultyLabel(level);
+        var difficultyScoreText = BuildDifficultyScoreText(level);
+        var insight = AnalyzeState(level, CurrentState);
 
         Title = level.Title;
         Subtitle = level.Subtitle;
@@ -601,8 +629,12 @@ public sealed partial class GameViewModel : ObservableObject
         CompletedText = $"{_game.CompletedLevelIds.Count}/{Levels.Count}";
         MovesText = Moves.ToString(CultureInfo.InvariantCulture);
         BestText = hasBest ? $"{bestMoves} / {level.OptimalMoves}" : $"- / {level.OptimalMoves}";
-        DifficultyText = difficultyLabel;
-        ModeText = ExpertMode ? "Expert: no undo, redo, or nudge" : "Standard: assist tools enabled";
+        DifficultyText = $"{difficultyLabel} • {difficultyScoreText}";
+        ModeText = ExpertMode ? "Expert • assist off" : "Standard • assist on";
+        BoardReadText = BuildBoardReadText(insight);
+        SelectionText = SelectedJointIndex is null
+            ? BuildSelectionPrompt(insight)
+            : BuildSelectedJointText(level, CurrentState, SelectedJointIndex.Value);
         ApproachText = BuildApproachText(level);
         BadgeText = BuildBadgeText(level, hasBest, bestMoves);
         ApplyBadgeStyle(hasBest, bestMoves);
@@ -610,9 +642,7 @@ public sealed partial class GameViewModel : ObservableObject
         var solvedStatus = IsSolved && !IsBusy
             ? BuildSolvedStatus(level.OptimalMoves, hasBest, bestMoves)
             : StatusMessage;
-        StatusText = SelectedJointIndex is null
-            ? solvedStatus
-            : $"{solvedStatus} Selected joint: {SelectedJointIndex}.";
+        StatusText = solvedStatus;
 
         ShowSolvedCard = IsSolved && !IsBusy;
         if (ShowSolvedCard)
@@ -673,7 +703,7 @@ public sealed partial class GameViewModel : ObservableObject
             else bronze++;
         }
         HomeMedalInfo = gold + silver + bronze > 0
-            ? $"🥇 {gold}  🥈 {silver}  🥉 {bronze}\n{gold + silver + bronze}/{Levels.Count} chapters rated"
+            ? $"Gold {gold}  Silver {silver}  Bronze {bronze}\n{gold + silver + bronze}/{Levels.Count} chapters rated"
             : "No medals earned yet\nPar or better = gold";
 
         HomePrimaryLabel = HomeAllowsClose ? "Resume"
@@ -694,14 +724,14 @@ public sealed partial class GameViewModel : ObservableObject
                     : $"No clear yet";
 
             var profile = level.TreeProfile;
-            var difficultyText = BuildDifficultyLabel(level);
-            var scoreText = BuildDifficultyScoreText(level);
+            var difficultyText = $"{BuildDifficultyLabel(level)} • {BuildDifficultyScoreText(level)}";
+            var methodText = BuildMethodHint(level);
             var pressureText = profile is null
                 ? $"Par {level.OptimalMoves}"
-                : $"{difficultyText} ({scoreText}) • par {level.OptimalMoves} • traps {profile.StartTrapMoveCount}";
+                : $"Par {level.OptimalMoves} • {profile.StartCloserMoveCount}/{profile.StartLegalMoveCount} openings improve coverage • {profile.StartTrapMoveCount} trap turns";
             var branchText = profile is null
                 ? "No branch profile baked in"
-                : $"Method {BuildMethodHint(level)} • False lanes {profile.StartFalseProgressMoveCount} • decoys {profile.NearTargetDecoyCount} • shell-4 {profile.GoalShellCounts[^1]}";
+                : $"{profile.StartFalseProgressMoveCount} false-fit starts • {profile.NearTargetDecoyCount} near-target decoys • shell-4 breadth {profile.GoalShellCounts[^1]}";
 
             return new ChapterGalleryCard(
                 index,
@@ -712,6 +742,8 @@ public sealed partial class GameViewModel : ObservableObject
                 index == LevelIndex,
                 _game.CompletedLevelIds.Contains(level.Id),
                 BuildMedalLabel(level.OptimalMoves, hasBest, bestMoves),
+                difficultyText,
+                methodText,
                 bestText,
                 pressureText,
                 branchText);
@@ -723,7 +755,7 @@ public sealed partial class GameViewModel : ObservableObject
         ChapterPickerItems = Levels.Select((level, index) =>
         {
             var marker = _game.CompletedLevelIds.Contains(level.Id) ? "✓" : " ";
-            var difficultySuffix = $"  [{BuildDifficultyLabel(level)}]";
+            var difficultySuffix = $"  [{BuildDifficultyLabel(level)} {BuildDifficultyScoreText(level)}]";
             var bestSuffix = _bestMovesByLevelId.TryGetValue(level.Id, out var best)
                 ? $"  best {best}/{level.OptimalMoves}" : "";
             return $"{marker} {index + 1:00}. {level.Subtitle}{difficultySuffix}{bestSuffix}";
@@ -750,17 +782,18 @@ public sealed partial class GameViewModel : ObservableObject
     private string BuildBadgeText(ChainLevel level, bool hasBest, int best)
     {
         var difficultyLabel = BuildDifficultyLabel(level);
-        var modePrefix = ExpertMode ? "Expert" : difficultyLabel;
+        var modePrefix = ExpertMode ? $"Expert / {difficultyLabel}" : difficultyLabel;
+        var scoreText = BuildDifficultyScoreText(level);
 
         if (IsSolved && !IsBusy && hasBest && Moves == best)
-            return Moves == level.OptimalMoves ? $"{modePrefix} run, personal best at par" : $"{modePrefix} run, personal best";
+            return Moves == level.OptimalMoves ? $"{modePrefix} run • heat {scoreText} • personal best at par" : $"{modePrefix} run • heat {scoreText} • personal best";
         if (IsSolved && !IsBusy)
-            return Moves == level.OptimalMoves ? $"{modePrefix} clear at par" : $"{modePrefix} clear, par {level.OptimalMoves}";
+            return Moves == level.OptimalMoves ? $"{modePrefix} clear • heat {scoreText} • at par" : $"{modePrefix} clear • heat {scoreText} • par {level.OptimalMoves}";
         if (hasBest)
-            return $"{modePrefix} • par {level.OptimalMoves}, best {best}";
+            return $"{modePrefix} • heat {scoreText} • par {level.OptimalMoves} • best {best}";
         return _game.CompletedLevelIds.Contains(CurrentLevel.Id)
-            ? $"{modePrefix} • cleared before, par {level.OptimalMoves}"
-            : $"{modePrefix} • fresh chapter, par {level.OptimalMoves}";
+            ? $"{modePrefix} • heat {scoreText} • cleared before • par {level.OptimalMoves}"
+            : $"{modePrefix} • heat {scoreText} • fresh chapter • par {level.OptimalMoves}";
     }
 
     private void ApplyBadgeStyle(bool hasBest, int best)
@@ -785,7 +818,7 @@ public sealed partial class GameViewModel : ObservableObject
     {
         var bestClause = hasBest
             ? $"Best run: {best} move{(best == 1 ? "" : "s")}." : "First clear recorded.";
-        var difficultyClause = $"Difficulty: {BuildDifficultyLabel(CurrentLevel)}. {BuildApproachText(CurrentLevel)}";
+        var difficultyClause = $"Difficulty: {BuildDifficultyLabel(CurrentLevel)} ({BuildDifficultyScoreText(CurrentLevel)} heat). {BuildApproachText(CurrentLevel)}";
         var delta = Moves - optimal;
         var parClause = delta switch
         {
@@ -812,40 +845,28 @@ public sealed partial class GameViewModel : ObservableObject
 
     private static string BuildDifficultyLabel(ChainLevel level)
     {
-        var profile = level.TreeProfile;
-        if (profile is null)
+        var score = BuildDifficultyScore(level);
+        return score switch
         {
-            return $"Par {level.OptimalMoves}";
-        }
-
-        if (level.OptimalMoves >= 8 && profile.StartFalseProgressMoveCount >= 27)
-        {
-            return "Savage";
-        }
-
-        if (level.OptimalMoves >= 8)
-        {
-            return "Brutal";
-        }
-
-        if (level.OptimalMoves >= 7 || profile.StartTrapMoveCount >= 28 || profile.NearTargetDecoyCount >= 25)
-        {
-            return "Demanding";
-        }
-
-        return "Tactical";
+            < 56 => "Tactical",
+            < 64 => "Tight",
+            < 72 => "Demanding",
+            < 80 => "Brutal",
+            _ => "Savage"
+        };
     }
 
     private static string BuildDifficultyScoreText(ChainLevel level)
     {
-        var profile = level.TreeProfile;
-        if (profile is null)
-        {
-            return string.Empty;
-        }
+        return $"{BuildDifficultyScore(level)}/100";
+    }
 
-        var raw = ComputeDifficultyScore(level.OptimalMoves, profile);
-        return $"{raw}/100";
+    private static int BuildDifficultyScore(ChainLevel level)
+    {
+        var profile = level.TreeProfile;
+        return profile is null
+            ? Math.Clamp(level.OptimalMoves * 10, 0, 100)
+            : ComputeDifficultyScore(level.OptimalMoves, profile);
     }
 
     private static int ComputeDifficultyScore(int optimalMoves, LevelTreeProfile profile)
@@ -853,32 +874,18 @@ public sealed partial class GameViewModel : ObservableObject
         var legalMoves = Math.Max(profile.StartLegalMoveCount, 1);
         var trapRatio = profile.StartTrapMoveCount / (double)legalMoves;
         var falseRatio = profile.StartFalseProgressMoveCount / (double)legalMoves;
+        var shellBreadth = profile.GoalShellCounts.Count >= 5 ? profile.GoalShellCounts[4] : 3_000;
 
-        var shellPressure = profile.GoalShellCounts.Count >= 5
-            ? Math.Clamp(profile.GoalShellCounts[4], 1, 6_000)
-            : 3_000;
-        var shellScore = shellPressure >= 4_000
-            ? 8
-            : shellPressure >= 3_200
-                ? 16
-                : shellPressure >= 2_500
-                    ? 26
-                    : 36;
+        var score = 24d
+                    + ((optimalMoves - 6) * 12d)
+                    + (Normalize(trapRatio, 0.65d, 0.90d) * 14d)
+                    + (Normalize(falseRatio, 0.55d, 0.90d) * 12d)
+                    + (Normalize(profile.NearTargetDecoyCount, 8d, 30d) * 10d)
+                    + (Normalize(shellBreadth, 2_500d, 5_500d) * 8d)
+                    + (Normalize(6 - profile.StartOverlap, 0d, 3d) * 4d)
+                    + (Normalize(6 - profile.StartCloserMoveCount, 0d, 5d) * 4d);
 
-        var decoyPressure = Math.Clamp((profile.NearTargetDecoyCount - 8) * 2, 0, 28);
-        var overlapPenalty = profile.StartOverlap >= 6 ? 0 : (6 - profile.StartOverlap) * 3;
-        var closerBonus = Math.Clamp(profile.StartCloserMoveCount * 4, 0, 14);
-
-        var score = 12
-                    + (optimalMoves * 7)
-                    + (int)Math.Round(trapRatio * 30)
-                    + (int)Math.Round(falseRatio * 24)
-                    + shellScore
-                    + decoyPressure
-                    + overlapPenalty
-                    + closerBonus;
-
-        return Math.Clamp(score, 0, 100);
+        return (int)Math.Round(Math.Clamp(score, 0d, 100d));
     }
 
     private static string BuildMethodHint(ChainLevel level)
@@ -894,12 +901,12 @@ public sealed partial class GameViewModel : ObservableObject
         var trapRatio = profile.StartTrapMoveCount / (double)legalMoves;
 
         return falseLaneRatio >= 0.75
-            ? "Filter decoys first"
+            ? "Filter the false fits"
             : trapRatio >= 0.7
-                ? "Keep escape routes open"
+                ? "Keep the escape lanes alive"
                 : profile.StartCloserMoveCount <= 3
-                    ? "Rebuild from the middle"
-                    : "Balance local and global fit";
+                    ? "Rebuild the center first"
+                    : "Trade local fit for final order";
     }
 
     private static string BuildApproachText(ChainLevel level)
@@ -914,13 +921,202 @@ public sealed partial class GameViewModel : ObservableObject
 
         var routeHint = profile.StartCloserMoveCount switch
         {
-            <= 2 => "Very few obvious improving moves exist. Expect a slow read.",
-            <= 4 => "Several openings look locally correct. Preserve lanes for the late fit.",
-            _ => "Many starts look playable. The finish order is the real constraint."
+            <= 2 => $"Only {profile.StartCloserMoveCount} of {profile.StartLegalMoveCount} opening turns improve coverage. Expect a slow read.",
+            <= 4 => $"{profile.StartCloserMoveCount} of {profile.StartLegalMoveCount} opening turns improve coverage, so read before you commit.",
+            _ => $"{profile.StartCloserMoveCount} of {profile.StartLegalMoveCount} opening turns improve coverage, but the finish order is still the real constraint."
         };
 
-        return $"Method: {methodHint}. {routeHint} Why hard: {profile.StartTrapMoveCount} trap starts, {profile.StartFalseProgressMoveCount} false lanes, {profile.NearTargetDecoyCount} deep decoys.";
+        return $"Method: {methodHint}. {routeHint} Pressure profile: {profile.StartTrapMoveCount} trap starts, {profile.StartFalseProgressMoveCount} false-fit starts, {profile.NearTargetDecoyCount} near-target decoys.";
+    }
+
+    private StateInsight AnalyzeState(ChainLevel level, ChainState state)
+    {
+        var overlap = level.CountTargetOverlap(state);
+        var legalMoves = GetAnalysisSolver(state.SegmentCount).GetLegalMoves(state);
+        var improvingMoves = 0;
+        var neutralMoves = 0;
+        var riskyMoves = 0;
+        var bestGain = 0;
+        var containedMoves = 0;
+
+        foreach (var legalMove in legalMoves)
+        {
+            var nextOverlap = level.CountTargetOverlap(legalMove.NextState);
+            var delta = nextOverlap - overlap;
+            bestGain = Math.Max(bestGain, delta);
+
+            if (delta > 0)
+            {
+                improvingMoves += 1;
+            }
+            else if (delta < 0)
+            {
+                riskyMoves += 1;
+            }
+            else
+            {
+                neutralMoves += 1;
+            }
+
+            if (level.IsWithinTarget(legalMove.NextState))
+            {
+                containedMoves += 1;
+            }
+        }
+
+        return new StateInsight(
+            level.TargetPoints.Count,
+            overlap,
+            level.TargetPoints.Count - overlap,
+            legalMoves.Count,
+            improvingMoves,
+            neutralMoves,
+            riskyMoves,
+            bestGain,
+            containedMoves);
+    }
+
+    private RotationReadout AnalyzeRotation(ChainLevel level, ChainState state, int jointIndex, int rotation)
+    {
+        var nextState = state.RotateFromJoint(jointIndex, rotation);
+        if (nextState is null)
+        {
+            return new RotationReadout(true, 0, 0, false);
+        }
+
+        var currentOverlap = level.CountTargetOverlap(state);
+        var nextOverlap = level.CountTargetOverlap(nextState);
+        var currentLegalMoves = GetAnalysisSolver(state.SegmentCount).GetLegalMoves(state).Count;
+        var nextLegalMoves = GetAnalysisSolver(nextState.SegmentCount).GetLegalMoves(nextState).Count;
+
+        return new RotationReadout(
+            false,
+            nextOverlap - currentOverlap,
+            nextLegalMoves - currentLegalMoves,
+            level.IsWithinTarget(nextState));
+    }
+
+    private ChainSolver GetAnalysisSolver(int segmentCount)
+    {
+        if (_analysisSolvers.TryGetValue(segmentCount, out var existing))
+        {
+            return existing;
+        }
+
+        var solver = new ChainSolver(segmentCount);
+        _analysisSolvers[segmentCount] = solver;
+        return solver;
+    }
+
+    private static string BuildBoardReadText(StateInsight insight)
+    {
+        var percent = insight.TargetSize == 0
+            ? 0
+            : (int)Math.Round((insight.Overlap * 100d) / insight.TargetSize);
+        var improvementText = insight.BestGain > 0
+            ? $"Best immediate gain: +{insight.BestGain} tile{(insight.BestGain == 1 ? "" : "s")}."
+            : insight.ImprovingMoves == 0
+                ? "No turn improves coverage immediately."
+                : "Coverage gains are shallow from here.";
+
+        return $"{insight.Overlap}/{insight.TargetSize} tiles aligned ({percent}%). {insight.MisplacedCount} tiles are still out of place. {insight.LegalMoves} legal turns remain; {insight.ImprovingMoves} improve coverage, {insight.RiskyMoves} lose ground, and {insight.ContainedMoves} stay fully inside the silhouette. {improvementText}";
+    }
+
+    private string BuildSelectionPrompt(StateInsight insight)
+    {
+        if (IsSolved)
+        {
+            return "Board complete. Use Replay Chapter to refine the line or Next Chapter to keep climbing.";
+        }
+
+        return insight.BestGain > 0
+            ? $"Select a joint to preview left and right. The best available turn gains {insight.BestGain} tile{(insight.BestGain == 1 ? "" : "s")} immediately."
+            : "Select a joint to preview left and right. This position is about ordering the folds, not grabbing instant coverage.";
+    }
+
+    private string BuildSelectedJointText(ChainLevel level, ChainState state, int jointIndex)
+    {
+        var left = AnalyzeRotation(level, state, jointIndex, -1);
+        var right = AnalyzeRotation(level, state, jointIndex, 1);
+        return $"Joint {jointIndex}. Left: {BuildRotationOutcomeText(left)} Right: {BuildRotationOutcomeText(right)}";
+    }
+
+    private string BuildCompactStateSummary(ChainState state)
+    {
+        var insight = AnalyzeState(CurrentLevel, state);
+        return $"{insight.Overlap}/{insight.TargetSize} aligned, {insight.MisplacedCount} still misplaced.";
+    }
+
+    private static string BuildOpeningStatus(ChainLevel level)
+    {
+        var profile = level.TreeProfile;
+        if (profile is null)
+        {
+            return "Pick a joint and start matching the silhouette.";
+        }
+
+        return $"{BuildMethodHint(level)}. Only {profile.StartCloserMoveCount} of {profile.StartLegalMoveCount} opening turns improve coverage.";
+    }
+
+    private string BuildBlockedMoveStatus(ChainState state)
+    {
+        var insight = AnalyzeState(CurrentLevel, state);
+        return insight.ImprovingMoves == 0
+            ? "That hinge collides with the chain. This position is about order, not forcing a tighter fold."
+            : $"That hinge collides with the chain. {insight.ImprovingMoves} legal turn{(insight.ImprovingMoves == 1 ? "" : "s")} still improve coverage from here.";
+    }
+
+    private string BuildRotationStatus(int jointIndex, int rotation, ChainState previousState, ChainState nextState)
+    {
+        var previousOverlap = CurrentLevel.CountTargetOverlap(previousState);
+        var nextOverlap = CurrentLevel.CountTargetOverlap(nextState);
+        var delta = nextOverlap - previousOverlap;
+        var insight = AnalyzeState(CurrentLevel, nextState);
+        var deltaText = delta switch
+        {
+            > 0 => $"coverage +{delta}",
+            < 0 => $"coverage {delta}",
+            _ => "coverage unchanged"
+        };
+
+        return $"Joint {jointIndex} {FormatRotation(rotation)}. {deltaText}; now {insight.Overlap}/{insight.TargetSize} aligned with {insight.LegalMoves} legal turns left.";
+    }
+
+    private static string BuildRotationOutcomeText(RotationReadout readout)
+    {
+        if (readout.IsBlocked)
+        {
+            return "blocked.";
+        }
+
+        var coverageText = readout.OverlapDelta switch
+        {
+            > 0 => $"coverage +{readout.OverlapDelta}",
+            < 0 => $"coverage {readout.OverlapDelta}",
+            _ => "coverage flat"
+        };
+        var tempoText = readout.LegalMoveDelta switch
+        {
+            > 0 => $", legal turns +{readout.LegalMoveDelta}",
+            < 0 => $", legal turns {readout.LegalMoveDelta}",
+            _ => ", legal turns unchanged"
+        };
+        var containmentText = readout.EndsInsideTarget
+            ? ", stays inside target."
+            : ", still reaches outside the silhouette.";
+
+        return $"{coverageText}{tempoText}{containmentText}";
     }
 
     private static string FormatRotation(int rotation) => rotation < 0 ? "left" : "right";
+
+    private static double Normalize(double value, double minimum, double maximum)
+    {
+        if (maximum <= minimum)
+        {
+            return 0d;
+        }
+
+        return Math.Clamp((value - minimum) / (maximum - minimum), 0d, 1d);
+    }
 }

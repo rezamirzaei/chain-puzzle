@@ -14,6 +14,8 @@ public sealed record ChapterGalleryCard(
     bool IsCurrent,
     bool IsCleared,
     string MedalLabel,
+    string DifficultyText,
+    string MethodText,
     string BestText,
     string PressureText,
     string BranchText);

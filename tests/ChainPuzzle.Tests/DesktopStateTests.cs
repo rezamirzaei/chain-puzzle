@@ -99,18 +99,22 @@ public sealed class DesktopStateTests
         Assert.True(first.IsCurrent);
         Assert.Equal("Open", first.MedalLabel);
         Assert.Equal("01", first.NumberText);
-        Assert.Contains("Tactical", first.PressureText, StringComparison.Ordinal);
-        Assert.Contains("par 6", first.PressureText, StringComparison.Ordinal);
-        Assert.Contains("traps 25", first.PressureText, StringComparison.Ordinal);
-        Assert.Contains("False lanes 25", first.BranchText, StringComparison.Ordinal);
-        Assert.Contains("decoys 14", first.BranchText, StringComparison.Ordinal);
+        Assert.Contains("Tactical", first.DifficultyText, StringComparison.Ordinal);
+        Assert.Contains("/100", first.DifficultyText, StringComparison.Ordinal);
+        Assert.Contains("Filter the false fits", first.MethodText, StringComparison.Ordinal);
+        Assert.Contains("Par 6", first.PressureText, StringComparison.Ordinal);
+        Assert.Contains("5/30 openings improve coverage", first.PressureText, StringComparison.Ordinal);
+        Assert.Contains("25 trap turns", first.PressureText, StringComparison.Ordinal);
+        Assert.Contains("25 false-fit starts", first.BranchText, StringComparison.Ordinal);
+        Assert.Contains("14 near-target decoys", first.BranchText, StringComparison.Ordinal);
 
         Assert.Equal("10", final.NumberText);
-        Assert.Contains("Savage", final.PressureText, StringComparison.Ordinal);
-        Assert.Contains("par 8", final.PressureText, StringComparison.Ordinal);
-        Assert.Contains("shell-4 4009", final.BranchText, StringComparison.Ordinal);
-        Assert.Equal("Tactical", viewModel.DifficultyText);
-        Assert.StartsWith("Standard:", viewModel.ModeText, StringComparison.Ordinal);
+        Assert.Contains("Brutal", final.DifficultyText, StringComparison.Ordinal);
+        Assert.Contains("Par 8", final.PressureText, StringComparison.Ordinal);
+        Assert.Contains("shell-4 breadth 4009", final.BranchText, StringComparison.Ordinal);
+        Assert.Contains("Tactical", viewModel.DifficultyText, StringComparison.Ordinal);
+        Assert.Contains("/100", viewModel.DifficultyText, StringComparison.Ordinal);
+        Assert.StartsWith("Standard", viewModel.ModeText, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -124,7 +128,7 @@ public sealed class DesktopStateTests
 
         Assert.Equal(7, viewModel.LevelIndex);
         Assert.False(viewModel.IsHomeVisible);
-        Assert.Equal("Jumped to Shield.", viewModel.StatusMessage);
+        Assert.StartsWith("Jumped to Shield.", viewModel.StatusMessage, StringComparison.Ordinal);
     }
 
     [Fact]

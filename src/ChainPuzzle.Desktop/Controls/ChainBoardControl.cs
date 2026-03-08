@@ -403,7 +403,7 @@ public sealed class ChainBoardControl : Control
         _chainDarkWood = new SolidColorBrush(ParseColor("#B07D56", Colors.SaddleBrown));
         _chainShadow = new SolidColorBrush(Color.FromArgb(60, 20, 20, 20));
         _chainEdgeBrush = new SolidColorBrush(Color.FromArgb(180, 70, 45, 35));
-        _chainMetalBrush = new SolidColorBrush(ParseColor("#A8A29E", Colors.SlateGray));
+        _chainMetalBrush = new SolidColorBrush(Mix(ParseColor("#A8A29E", Colors.SlateGray), _accentColor, 0.14));
     }
 
     private void DrawChainJoints(DrawingContext context)
@@ -428,6 +428,16 @@ public sealed class ChainBoardControl : Control
             var strokeBrush = isActive
                 ? new SolidColorBrush(ParseColor("#D00000", Colors.Red))
                 : new SolidColorBrush(ParseColor("#264653", Colors.DarkSlateGray));
+
+            if (isActive)
+            {
+                context.DrawEllipse(
+                    new SolidColorBrush(Color.FromArgb(44, _accentColor.R, _accentColor.G, _accentColor.B)),
+                    null,
+                    joint,
+                    16,
+                    16);
+            }
 
             context.DrawEllipse(
                 _chainMetalBrush,
