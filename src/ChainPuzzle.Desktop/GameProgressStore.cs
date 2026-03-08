@@ -2,16 +2,19 @@ using System.Text.Json;
 
 namespace ChainPuzzle.Desktop;
 
+/// <summary>Serialisable document for persisting game progress between sessions.</summary>
 internal sealed record GameProgressDocument(
     int Version,
     int CurrentLevelIndex,
     string[] CompletedLevelIds,
     Dictionary<string, int> BestMovesByLevelId)
 {
+    /// <summary>An empty document with default values.</summary>
     public static GameProgressDocument Empty { get; } =
         new(GameProgressStore.CurrentVersion, 0, Array.Empty<string>(), new Dictionary<string, int>());
 }
 
+/// <summary>Reads and writes game progress (current chapter, completed chapters, best moves) to a local JSON file.</summary>
 internal sealed class GameProgressStore
 {
     public const int CurrentVersion = 3;

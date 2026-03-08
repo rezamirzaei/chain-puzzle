@@ -5,6 +5,10 @@ using System.Linq;
 
 namespace ChainPuzzle.Tests;
 
+/// <summary>
+/// Structural invariant tests for all shipped chapters: solvability, unique covers,
+/// shape quality, tree breadth, start deceptiveness, and undo/redo correctness.
+/// </summary>
 public sealed class ChainCoreTests
 {
     private static readonly IntPoint[] NeighborOffsets =

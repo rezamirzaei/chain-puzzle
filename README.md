@@ -91,3 +91,17 @@ The project uses GitHub Actions for continuous integration. The pipeline:
 2. Builds in Release mode
 3. Runs all tests with code coverage collection
 4. Uploads coverage artifacts
+
+## Hex Coordinate System
+
+The game uses **axial hex coordinates** (pointy-top orientation):
+
+- Each cell is identified by an `IntPoint(q, r)` where `q` = column, `r` = row.
+- The six directions map to: E `(+1,0)`, NE `(+1,−1)`, NW `(0,−1)`, W `(−1,0)`, SW `(−1,+1)`, SE `(0,+1)`.
+- Screen projection: `screenX = q + r * 0.5`, `screenY = r * √3/2`.
+- The chain starts at the origin `(0,0)` and extends segment-by-segment along these directions.
+
+## Code Style
+
+The repository includes an `.editorconfig` with standard C# style rules and a `Directory.Build.props` with shared nullable, implicit usings, and analysis-level settings applied to all projects.
+

@@ -41,6 +41,7 @@ public partial class MainWindow : Window
     private readonly TextBlock _homeSummaryText;
     private readonly TextBlock _homeProgressText;
     private readonly TextBlock _homeBestText;
+    private readonly TextBlock _homeMedalText;
     private readonly TextBlock _titleText;
     private readonly TextBlock _subtitleText;
     private readonly TextBlock _descriptionText;
@@ -83,6 +84,7 @@ public partial class MainWindow : Window
         _homeSummaryText = GetRequiredControl<TextBlock>("HomeSummaryText");
         _homeProgressText = GetRequiredControl<TextBlock>("HomeProgressText");
         _homeBestText = GetRequiredControl<TextBlock>("HomeBestText");
+        _homeMedalText = GetRequiredControl<TextBlock>("HomeMedalText");
         _titleText = GetRequiredControl<TextBlock>("TitleText");
         _subtitleText = GetRequiredControl<TextBlock>("SubtitleText");
         _descriptionText = GetRequiredControl<TextBlock>("DescriptionText");
@@ -147,6 +149,7 @@ public partial class MainWindow : Window
         _homeSummaryText.Text = _vm.HomeSummary;
         _homeProgressText.Text = _vm.HomeProgressInfo;
         _homeBestText.Text = _vm.HomeBestInfo;
+        _homeMedalText.Text = _vm.HomeMedalInfo;
         _homePrimaryButton.Content = _vm.HomePrimaryLabel;
         _homeSecondaryButton.IsVisible = _vm.HomeSecondaryVisible;
         _homeCloseButton.IsVisible = _vm.HomeAllowsClose;

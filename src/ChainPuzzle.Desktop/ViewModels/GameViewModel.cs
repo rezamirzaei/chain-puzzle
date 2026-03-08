@@ -101,6 +101,7 @@ public sealed partial class GameViewModel : ObservableObject
     [ObservableProperty] private string _homeSummary = "";
     [ObservableProperty] private string _homeProgressInfo = "";
     [ObservableProperty] private string _homeBestInfo = "";
+    [ObservableProperty] private string _homeMedalInfo = "";
     [ObservableProperty] private string _homePrimaryLabel = "";
     [ObservableProperty] private bool _homeSecondaryVisible;
 
@@ -448,6 +449,21 @@ public sealed partial class GameViewModel : ObservableObject
             ? $"{_bestMovesByLevelId.Count} chapters have saved best runs\nPar is tracked on every chapter"
             : "No best runs stored yet\nPar is tracked on every chapter";
 
+        var gold = 0;
+        var silver = 0;
+        var bronze = 0;
+        foreach (var level in Levels)
+        {
+            if (!_bestMovesByLevelId.TryGetValue(level.Id, out var best)) continue;
+            var delta = best - level.OptimalMoves;
+            if (delta <= 0) gold++;
+            else if (delta == 1) silver++;
+            else bronze++;
+        }
+        HomeMedalInfo = gold + silver + bronze > 0
+            ? $"🥇 {gold}  🥈 {silver}  🥉 {bronze}\n{gold + silver + bronze}/{Levels.Count} chapters rated"
+            : "No medals earned yet\nPar or better = gold";
+
         HomePrimaryLabel = HomeAllowsClose ? "Resume" : hasRun ? "Continue" : "Start Game";
         HomeSecondaryVisible = HomeAllowsClose || hasRun;
     }
@@ -523,4 +539,6 @@ public sealed partial class GameViewModel : ObservableObject
 
     private static string FormatRotation(int rotation) => rotation < 0 ? "left" : "right";
 }
+
+
 

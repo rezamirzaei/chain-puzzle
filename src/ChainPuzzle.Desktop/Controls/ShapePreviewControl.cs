@@ -5,6 +5,10 @@ using ChainPuzzle.Core;
 
 namespace ChainPuzzle.Desktop.Controls;
 
+/// <summary>
+/// A compact hex-grid thumbnail control that renders a chapter's target silhouette.
+/// Used in the home overlay chapter gallery.
+/// </summary>
 public sealed class ShapePreviewControl : Control
 {
     private const double HexHeight = 0.8660254037844386; // sqrt(3) / 2

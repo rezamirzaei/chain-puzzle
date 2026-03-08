@@ -9,6 +9,8 @@ namespace ChainPuzzle.Core;
 /// </summary>
 public sealed class ChainState : IEquatable<ChainState>
 {
+    private static readonly char[] PatternSeparators = { ' ', ',', ';', '\t', '\r', '\n' };
+
     private readonly ChainSegment[] _segments;
     private IReadOnlyList<IntPoint>? _points;
     private IReadOnlyList<IntPoint>? _jointPoints;
@@ -57,7 +59,7 @@ public sealed class ChainState : IEquatable<ChainState>
         }
 
         var tokens = pattern
-            .Split(new[] { ' ', ',', ';', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            .Split(PatternSeparators, StringSplitOptions.RemoveEmptyEntries);
         if (tokens.Length == 0)
         {
             throw new ArgumentException("Direction source must not be empty.", nameof(pattern));
@@ -101,7 +103,7 @@ public sealed class ChainState : IEquatable<ChainState>
         }
 
         var tokens = directions
-            .Split(new[] { ' ', ',', ';', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            .Split(PatternSeparators, StringSplitOptions.RemoveEmptyEntries);
 
         if (tokens.Length == 0)
         {

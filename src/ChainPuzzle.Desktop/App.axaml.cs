@@ -4,6 +4,7 @@ using Avalonia.Markup.Xaml;
 
 namespace ChainPuzzle.Desktop;
 
+/// <summary>Avalonia application entry point. Initialises XAML and creates the main window.</summary>
 public partial class App : Application
 {
     public override void Initialize()

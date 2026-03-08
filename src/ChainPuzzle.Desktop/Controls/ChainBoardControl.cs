@@ -35,6 +35,19 @@ public sealed class ChainBoardControl : Control
     private Color _cachedAccentForBrushes;
     private bool _cachedSolvedForBrushes;
 
+    // Cached background brushes — static, never change.
+    private LinearGradientBrush? _bgGradient;
+    private SolidColorBrush? _bgGlow;
+    private Color _cachedAccentForBg;
+
+    // Cached chain brushes/pens — recreated only when accent changes.
+    private SolidColorBrush? _chainLightWood;
+    private SolidColorBrush? _chainDarkWood;
+    private SolidColorBrush? _chainShadow;
+    private SolidColorBrush? _chainEdgeBrush;
+    private SolidColorBrush? _chainMetalBrush;
+    private Color _cachedAccentForChain;
+
     public ChainBoardControl()
     {
         ClipToBounds = true;
@@ -192,23 +205,30 @@ public sealed class ChainBoardControl : Control
 
     private void DrawBackground(DrawingContext context)
     {
-        var background = new LinearGradientBrush
+        if (_bgGradient is null)
         {
-            StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
-            EndPoint = new RelativePoint(1, 1, RelativeUnit.Relative),
-            GradientStops = new GradientStops
+            _bgGradient = new LinearGradientBrush
             {
-                new GradientStop(ParseColor("#E9F5FF", Colors.White), 0),
-                new GradientStop(ParseColor("#D8F3DC", Colors.White), 0.45),
-                new GradientStop(ParseColor("#FEFAE0", Colors.White), 1)
-            }
-        };
+                StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
+                EndPoint = new RelativePoint(1, 1, RelativeUnit.Relative),
+                GradientStops = new GradientStops
+                {
+                    new GradientStop(ParseColor("#E9F5FF", Colors.White), 0),
+                    new GradientStop(ParseColor("#D8F3DC", Colors.White), 0.45),
+                    new GradientStop(ParseColor("#FEFAE0", Colors.White), 1)
+                }
+            };
+        }
 
-        context.DrawRectangle(background, null, new Rect(0, 0, Bounds.Width, Bounds.Height));
+        if (_bgGlow is null || _cachedAccentForBg != _accentColor)
+        {
+            _cachedAccentForBg = _accentColor;
+            _bgGlow = new SolidColorBrush(Color.FromArgb(36, _accentColor.R, _accentColor.G, _accentColor.B));
+        }
 
-        var glowBrush = new SolidColorBrush(Color.FromArgb(36, _accentColor.R, _accentColor.G, _accentColor.B));
-        context.DrawEllipse(glowBrush, null, new Point(Bounds.Width * 0.2, Bounds.Height * 0.2), Bounds.Width * 0.2, Bounds.Width * 0.2);
-        context.DrawEllipse(glowBrush, null, new Point(Bounds.Width * 0.82, Bounds.Height * 0.78), Bounds.Width * 0.17, Bounds.Width * 0.17);
+        context.DrawRectangle(_bgGradient, null, new Rect(0, 0, Bounds.Width, Bounds.Height));
+        context.DrawEllipse(_bgGlow, null, new Point(Bounds.Width * 0.2, Bounds.Height * 0.2), Bounds.Width * 0.2, Bounds.Width * 0.2);
+        context.DrawEllipse(_bgGlow, null, new Point(Bounds.Width * 0.82, Bounds.Height * 0.78), Bounds.Width * 0.17, Bounds.Width * 0.17);
     }
 
     private void DrawTarget(DrawingContext context)
@@ -259,9 +279,7 @@ public sealed class ChainBoardControl : Control
             return;
         }
 
-        var lightWood = ParseColor("#F4EBD0", Colors.WhiteSmoke);
-        var darkWood = ParseColor("#B07D56", Colors.SaddleBrown);
-        var metal = ParseColor("#A8A29E", Colors.SlateGray);
+        EnsureChainBrushes();
 
         for (var index = 0; index < _segmentSpans.Count; index += 1)
         {
@@ -269,23 +287,33 @@ public sealed class ChainBoardControl : Control
             var start = WorldToScreen(_chainPoints[span.StartIndex]);
             var end = WorldToScreen(_chainPoints[span.EndIndex]);
             var isLight = index % 2 == 0;
-            var baseColor = isLight ? lightWood : darkWood;
-            var shadow = new SolidColorBrush(Color.FromArgb(60, 20, 20, 20));
+            var baseColor = isLight ? _chainLightWood! : _chainDarkWood!;
 
             var thickness = 20 + (span.Length - 1) * 3;
-            var shadowPen = new Pen(shadow, thickness + 4, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round);
-            var segmentPen = new Pen(new SolidColorBrush(baseColor), thickness, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round);
-            var edgePen = new Pen(new SolidColorBrush(Color.FromArgb(180, 70, 45, 35)), 2, lineCap: PenLineCap.Round);
+            var shadowPen = new Pen(_chainShadow, thickness + 4, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round);
+            var segmentPen = new Pen(baseColor, thickness, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round);
+            var edgePen = new Pen(_chainEdgeBrush, 2, lineCap: PenLineCap.Round);
 
             context.DrawLine(shadowPen, start, end);
             context.DrawLine(segmentPen, start, end);
             context.DrawLine(edgePen, start, end);
         }
 
-        DrawChainJoints(context, metal);
+        DrawChainJoints(context);
     }
 
-    private void DrawChainJoints(DrawingContext context, Color metal)
+    private void EnsureChainBrushes()
+    {
+        if (_chainLightWood is not null && _cachedAccentForChain == _accentColor) return;
+        _cachedAccentForChain = _accentColor;
+        _chainLightWood = new SolidColorBrush(ParseColor("#F4EBD0", Colors.WhiteSmoke));
+        _chainDarkWood = new SolidColorBrush(ParseColor("#B07D56", Colors.SaddleBrown));
+        _chainShadow = new SolidColorBrush(Color.FromArgb(60, 20, 20, 20));
+        _chainEdgeBrush = new SolidColorBrush(Color.FromArgb(180, 70, 45, 35));
+        _chainMetalBrush = new SolidColorBrush(ParseColor("#A8A29E", Colors.SlateGray));
+    }
+
+    private void DrawChainJoints(DrawingContext context)
     {
         if (_chainPoints.Count == 0)
         {
@@ -294,11 +322,9 @@ public sealed class ChainBoardControl : Control
 
         var root = WorldToScreen(_chainPoints[0]);
         var tip = WorldToScreen(_chainPoints[^1]);
-        var rootBrush = new SolidColorBrush(metal);
-        var tipBrush = new SolidColorBrush(metal);
 
-        context.DrawEllipse(rootBrush, new Pen(rootBrush, 2), root, 9, 9);
-        context.DrawEllipse(tipBrush, new Pen(tipBrush, 2), tip, 7, 7);
+        context.DrawEllipse(_chainMetalBrush, new Pen(_chainMetalBrush, 2), root, 9, 9);
+        context.DrawEllipse(_chainMetalBrush, new Pen(_chainMetalBrush, 2), tip, 7, 7);
 
         for (var index = 0; index < _jointPoints.Count; index += 1)
         {
@@ -306,13 +332,12 @@ public sealed class ChainBoardControl : Control
             var jointIndex = index + 1;
             var isActive = _activeJointIndex == jointIndex;
 
-            var fillBrush = new SolidColorBrush(metal);
             var strokeBrush = isActive
                 ? new SolidColorBrush(ParseColor("#D00000", Colors.Red))
                 : new SolidColorBrush(ParseColor("#264653", Colors.DarkSlateGray));
 
             context.DrawEllipse(
-                fillBrush,
+                _chainMetalBrush,
                 new Pen(strokeBrush, isActive ? 4 : 2),
                 joint,
                 isActive ? 7 : 6,
