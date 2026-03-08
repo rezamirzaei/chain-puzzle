@@ -204,7 +204,8 @@ public sealed class ChainBoardControl : Control
                 IncludePoint(Project(new Point(point.X, point.Y)), ref minX, ref maxX, ref minY, ref maxY);
             }
         }
-        else
+
+        if (_chainPoints.Count > 0)
         {
             foreach (var point in _chainPoints)
             {
@@ -215,8 +216,8 @@ public sealed class ChainBoardControl : Control
         var width = Math.Max(1d, maxX - minX);
         var height = Math.Max(1d, maxY - minY);
 
-        var horizontalPadding = 220d;
-        var verticalPadding = 240d;
+        var horizontalPadding = Math.Clamp(Bounds.Width * 0.14, 120d, 220d);
+        var verticalPadding = Math.Clamp(Bounds.Height * 0.24, 180d, 280d);
         var scaleX = (Bounds.Width - horizontalPadding) / width;
         var scaleY = (Bounds.Height - verticalPadding) / height;
         _scale = Math.Max(18d, Math.Min(scaleX, scaleY));

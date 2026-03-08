@@ -2,10 +2,10 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="using:ChainPuzzle.Desktop.Controls"
         x:Class="ChainPuzzle.Desktop.MainWindow"
-        Width="1420"
-        Height="920"
-        MinWidth="980"
-        MinHeight="680"
+        Width="1460"
+        Height="940"
+        MinWidth="1080"
+        MinHeight="720"
         Title="Chain Chapters"
         KeyDown="Window_OnKeyDown">
   <Grid>
@@ -16,224 +16,188 @@
 
     <Border x:Name="HomeOverlay"
             IsVisible="False"
-            Background="#A60F172A">
-      <Grid>
-        <Border Width="1120"
-                MaxHeight="820"
-                Padding="26"
-                HorizontalAlignment="Center"
-                VerticalAlignment="Center"
+            Background="#B30F172A">
+      <Grid Margin="28">
+        <Border Padding="26"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
                 Classes="panel">
-          <Grid RowDefinitions="Auto,Auto,Auto,*">
-            <StackPanel Grid.Row="0">
-              <TextBlock Text="Chain Chapters"
-                         FontSize="14"
-                         FontWeight="Bold"
-                         LetterSpacing="1.2"
-                         Foreground="#0F766E" />
-              <TextBlock x:Name="HomeTitleText"
-                         Margin="0,10,0,0"
-                         FontFamily="Georgia"
-                         FontSize="42"
-                         FontWeight="SemiBold"
-                         Foreground="#0F172A" />
-              <TextBlock x:Name="HomeSummaryText"
-                         Margin="0,10,0,0"
-                         FontSize="16"
-                         Foreground="#334155"
-                         TextWrapping="Wrap" />
-            </StackPanel>
-
-            <Grid Grid.Row="1"
-                  ColumnDefinitions="*,*,*"
-                  ColumnSpacing="10"
-                  Margin="0,18,0,14">
-              <Border Grid.Column="0"
-                      CornerRadius="12"
-                      Background="#F8FAFC"
-                      BorderBrush="#D1D5DB"
-                      BorderThickness="1"
-                      Padding="12">
-                <StackPanel>
-                  <TextBlock Text="Run Status"
-                             FontSize="11"
-                             Foreground="#64748B" />
-                  <TextBlock x:Name="HomeProgressText"
-                             FontSize="16"
+          <Grid ColumnDefinitions="360,*"
+                ColumnSpacing="22">
+            <Border Grid.Column="0"
+                    Background="#F6FFF9F1"
+                    BorderBrush="#E7ECEF"
+                    BorderThickness="1"
+                    CornerRadius="24"
+                    Padding="22">
+              <Grid RowDefinitions="Auto,Auto,Auto,*">
+                <StackPanel Grid.Row="0"
+                            Spacing="10">
+                  <TextBlock Text="CHAIN CHAPTERS"
+                             FontSize="13"
                              FontWeight="Bold"
+                             LetterSpacing="1.4"
+                             Foreground="#0F766E" />
+                  <TextBlock x:Name="HomeTitleText"
+                             FontFamily="Georgia"
+                             FontSize="42"
+                             FontWeight="SemiBold"
                              Foreground="#0F172A" />
-                </StackPanel>
-              </Border>
-              <Border Grid.Column="1"
-                      CornerRadius="12"
-                      Background="#F8FAFC"
-                      BorderBrush="#D1D5DB"
-                      BorderThickness="1"
-                      Padding="12">
-                <StackPanel>
-                  <TextBlock Text="Best Progress"
-                             FontSize="11"
-                             Foreground="#64748B" />
-                  <TextBlock x:Name="HomeBestText"
+                  <TextBlock x:Name="HomeSummaryText"
                              FontSize="16"
-                             FontWeight="Bold"
-                             Foreground="#0F172A" />
+                             Foreground="#334155"
+                             TextWrapping="Wrap" />
                 </StackPanel>
-              </Border>
-              <Border Grid.Column="2"
-                      CornerRadius="12"
-                      Background="#F8FAFC"
-                      BorderBrush="#D1D5DB"
-                      BorderThickness="1"
-                      Padding="12">
-                <StackPanel>
-                  <TextBlock Text="Medal Table"
-                             FontSize="11"
-                             Foreground="#64748B" />
-                  <TextBlock x:Name="HomeMedalText"
-                             FontSize="16"
-                             FontWeight="Bold"
-                             Foreground="#0F172A" />
+
+                <StackPanel Grid.Row="1"
+                            Margin="0,22,0,0"
+                            Spacing="10">
+                  <Border Classes="metricCard">
+                    <StackPanel Spacing="4">
+                      <TextBlock Text="Run Status"
+                                 FontSize="11"
+                                 Foreground="#64748B" />
+                      <TextBlock x:Name="HomeProgressText"
+                                 FontSize="16"
+                                 FontWeight="Bold"
+                                 Foreground="#0F172A" />
+                    </StackPanel>
+                  </Border>
+                  <Border Classes="metricCard">
+                    <StackPanel Spacing="4">
+                      <TextBlock Text="Best Progress"
+                                 FontSize="11"
+                                 Foreground="#64748B" />
+                      <TextBlock x:Name="HomeBestText"
+                                 FontSize="16"
+                                 FontWeight="Bold"
+                                 Foreground="#0F172A" />
+                    </StackPanel>
+                  </Border>
+                  <Border Classes="metricCard">
+                    <StackPanel Spacing="4">
+                      <TextBlock Text="Medal Table"
+                                 FontSize="11"
+                                 Foreground="#64748B" />
+                      <TextBlock x:Name="HomeMedalText"
+                                 FontSize="16"
+                                 FontWeight="Bold"
+                                 Foreground="#0F172A" />
+                    </StackPanel>
+                  </Border>
                 </StackPanel>
-              </Border>
-            </Grid>
 
-            <StackPanel Grid.Row="2">
-              <TextBlock Text="Rotate the articulated chain until every tile lands inside the silhouette. Gold means par or better, silver means one over par, bronze means cleared."
-                         FontSize="15"
-                         Foreground="#475569"
-                         TextWrapping="Wrap" />
-              <Grid ColumnDefinitions="*,*,*"
-                    ColumnSpacing="10"
-                    Margin="0,18,0,0">
-                <Button x:Name="HomePrimaryButton"
-                        Grid.Column="0"
-                        Classes="action"
-                        Content="Start Game"
-                        Click="HomePrimaryButton_OnClick" />
-                <Button x:Name="HomeSecondaryButton"
-                        Grid.Column="1"
-                        Classes="action secondary"
-                        Content="New Run"
-                        Click="HomeSecondaryButton_OnClick" />
-                <Button x:Name="HomeCloseButton"
-                        Grid.Column="2"
-                        Classes="action secondary"
-                        Content="Close Menu"
-                        Click="HomeCloseButton_OnClick" />
-              </Grid>
+                <StackPanel Grid.Row="2"
+                            Margin="0,22,0,0"
+                            Spacing="10">
+                  <TextBlock Text="A good chain puzzle gives you many believable folds and only one true finish. This set keeps only the broad, authored silhouettes and throws away the skinny gimmicks."
+                             FontSize="14"
+                             Foreground="#475569"
+                             TextWrapping="Wrap" />
+                  <Button x:Name="HomePrimaryButton"
+                          Classes="action"
+                          Content="Start Game"
+                          Click="HomePrimaryButton_OnClick" />
+                  <Button x:Name="HomeSecondaryButton"
+                          Classes="action secondary"
+                          Content="New Run"
+                          Click="HomeSecondaryButton_OnClick" />
+                  <Button x:Name="HomeCloseButton"
+                          Classes="action secondary"
+                          Content="Close Menu"
+                          Click="HomeCloseButton_OnClick" />
+                </StackPanel>
 
-              <Border Margin="0,14,0,0"
-                      CornerRadius="12"
-                      Background="#F8FAFC"
-                      BorderBrush="#D1D5DB"
-                      BorderThickness="1"
-                      Padding="12">
-                <Grid ColumnDefinitions="220,*,*,*"
-                      ColumnSpacing="16">
-                  <StackPanel Grid.Column="0">
-                    <TextBlock Text="Animation Speed"
-                               FontSize="11"
-                               Foreground="#64748B" />
-                    <ComboBox x:Name="AnimationSpeedPicker"
-                              Margin="0,6,0,0"
-                              SelectedIndex="1"
-                              SelectionChanged="AnimationSpeedPicker_OnSelectionChanged">
-                      <ComboBoxItem Content="Slow" />
-                      <ComboBoxItem Content="Normal" />
-                      <ComboBoxItem Content="Fast" />
-                    </ComboBox>
-                  </StackPanel>
+                <Border Grid.Row="3"
+                        Margin="0,22,0,0"
+                        Classes="infoCard">
+                  <StackPanel Spacing="12">
+                    <TextBlock Text="Run Settings"
+                               FontSize="12"
+                               FontWeight="Bold"
+                               Foreground="#0F172A" />
 
-                  <StackPanel Grid.Column="1"
-                              VerticalAlignment="Center">
+                    <StackPanel Spacing="4">
+                      <TextBlock Text="Animation Speed"
+                                 FontSize="11"
+                                 Foreground="#64748B" />
+                      <ComboBox x:Name="AnimationSpeedPicker"
+                                SelectedIndex="1"
+                                SelectionChanged="AnimationSpeedPicker_OnSelectionChanged">
+                        <ComboBoxItem Content="Slow" />
+                        <ComboBoxItem Content="Normal" />
+                        <ComboBoxItem Content="Fast" />
+                      </ComboBox>
+                    </StackPanel>
+
                     <CheckBox x:Name="HintHighlightsCheckBox"
                               Content="Highlight suggested joint on nudge"
                               Checked="SettingsCheckBox_OnChanged"
                               Unchecked="SettingsCheckBox_OnChanged" />
-                    <TextBlock Margin="0,6,0,0"
-                               FontSize="12"
-                               Foreground="#64748B"
-                               Text="Turn this off if you want the hint button to stay text-only." />
-                  </StackPanel>
-
-                  <StackPanel Grid.Column="2"
-                              VerticalAlignment="Center">
                     <CheckBox x:Name="SoundEnabledCheckBox"
                               Content="Enable sound effects"
                               Checked="SettingsCheckBox_OnChanged"
                               Unchecked="SettingsCheckBox_OnChanged" />
-                    <TextBlock Margin="0,6,0,0"
-                               FontSize="12"
-                               Foreground="#64748B"
-                               Text="Plays bundled blocked-move and solve sounds when a platform audio player is available." />
-                  </StackPanel>
-
-                  <StackPanel Grid.Column="3"
-                              VerticalAlignment="Center">
                     <CheckBox x:Name="ExpertModeCheckBox"
                               Content="Expert mode: no undo, redo, or nudge"
                               Checked="SettingsCheckBox_OnChanged"
                               Unchecked="SettingsCheckBox_OnChanged" />
-                    <TextBlock Margin="0,6,0,0"
-                               FontSize="12"
-                               Foreground="#64748B"
-                               Text="Hard mode for authored deduction. The chapter tree stays the same; the assist layer is removed." />
                   </StackPanel>
-                </Grid>
-              </Border>
-            </StackPanel>
+                </Border>
+              </Grid>
+            </Border>
 
-            <Border Grid.Row="3"
-                    Margin="0,18,0,0"
-                    CornerRadius="14"
-                    Background="#F8FAFC"
-                    BorderBrush="#D1D5DB"
-                    BorderThickness="1"
-                    Padding="14">
-              <Grid RowDefinitions="Auto,*">
-                <StackPanel>
-                  <TextBlock Text="Chapter Gallery"
+            <Grid Grid.Column="1"
+                  RowDefinitions="Auto,*"
+                  RowSpacing="16">
+              <Border Classes="infoCard"
+                      Padding="18">
+                <StackPanel Spacing="6">
+                  <TextBlock Text="Curated Gallery"
                              FontSize="14"
                              FontWeight="Bold"
                              Foreground="#0F172A" />
-                  <TextBlock Margin="0,4,0,0"
-                             Text="Click a card to jump straight into that chapter. Each card shows par, trap pressure, and near-target branch width."
-                             FontSize="12"
+                  <TextBlock Text="Each chapter card shows par, branch pressure, and the intended solving method. Click any card to jump there immediately."
+                             FontSize="13"
                              Foreground="#64748B"
                              TextWrapping="Wrap" />
                 </StackPanel>
-                <ScrollViewer Grid.Row="1"
-                              Margin="0,12,0,0"
-                              VerticalScrollBarVisibility="Auto">
+              </Border>
+
+              <Border Grid.Row="1"
+                      Background="#F8FAFC"
+                      BorderBrush="#D1D5DB"
+                      BorderThickness="1"
+                      CornerRadius="22"
+                      Padding="16">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
                   <WrapPanel x:Name="HomeChapterGallery"
-                             ItemWidth="256"
-                             ItemHeight="264"
+                             ItemWidth="268"
+                             ItemHeight="294"
                              Orientation="Horizontal" />
                 </ScrollViewer>
-              </Grid>
-            </Border>
+              </Border>
+            </Grid>
           </Grid>
         </Border>
       </Grid>
     </Border>
 
     <Border x:Name="SolvedCard"
-            Width="380"
-            Padding="18"
-            Margin="0,0,0,24"
+            Width="420"
+            Padding="20"
+            Margin="0,0,0,26"
             HorizontalAlignment="Center"
             VerticalAlignment="Bottom"
             IsVisible="False"
             Classes="panel">
-      <StackPanel>
+      <StackPanel Spacing="10">
         <TextBlock x:Name="SolvedTitleText"
                    FontFamily="Georgia"
                    FontSize="26"
                    FontWeight="SemiBold"
                    Foreground="#0F172A" />
         <TextBlock x:Name="SolvedSummaryText"
-                   Margin="0,8,0,14"
                    FontSize="15"
                    Foreground="#334155"
                    TextWrapping="Wrap" />
@@ -253,268 +217,287 @@
       </StackPanel>
     </Border>
 
-    <Grid Margin="16"
-          ColumnDefinitions="420,*,320">
-      <Border Grid.Column="0"
-              VerticalAlignment="Top"
-              Classes="panel">
-        <StackPanel Spacing="12">
-          <TextBlock Text="Chain Chapters"
-                     FontSize="13"
-                     FontWeight="Bold"
-                     LetterSpacing="1.2"
-                     Foreground="#1D4ED8" />
-          <TextBlock x:Name="TitleText"
-                     FontFamily="Georgia"
-                     FontSize="32"
-                     FontWeight="SemiBold"
-                     Foreground="#0F172A" />
-          <TextBlock x:Name="SubtitleText"
-                     FontSize="19"
-                     FontWeight="SemiBold"
-                     Foreground="#475569" />
-          <TextBlock x:Name="DescriptionText"
-                     TextWrapping="Wrap"
-                     FontSize="15"
-                     Foreground="#334155" />
-
-          <TextBlock Text="Jump To Chapter"
-                     FontSize="11"
-                     FontWeight="Bold"
-                     Foreground="#64748B" />
-          <ComboBox x:Name="ChapterPicker"
-                    SelectionChanged="ChapterPicker_OnSelectionChanged" />
-
-          <Grid ColumnDefinitions="*,*"
-                RowDefinitions="Auto,Auto,Auto"
-                ColumnSpacing="10"
-                RowSpacing="10">
-            <Border Grid.Column="0"
-                    Grid.Row="0"
-                    Classes="metricCard">
-              <StackPanel Spacing="3">
-                <TextBlock Text="Progress"
-                           FontSize="11"
-                           Foreground="#64748B" />
-                <TextBlock x:Name="ProgressText"
-                           FontSize="14"
-                           FontWeight="Bold" />
-              </StackPanel>
-            </Border>
-            <Border Grid.Column="1"
-                    Grid.Row="0"
-                    Classes="metricCard">
-              <StackPanel Spacing="3">
-                <TextBlock Text="Chapters Cleared"
-                           FontSize="11"
-                           Foreground="#64748B" />
-                <TextBlock x:Name="CompletedText"
-                           FontSize="14"
-                           FontWeight="Bold" />
-              </StackPanel>
-            </Border>
-            <Border Grid.Column="0"
-                    Grid.Row="1"
-                    Classes="metricCard">
-              <StackPanel Spacing="3">
-                <TextBlock Text="Moves"
-                           FontSize="11"
-                           Foreground="#64748B" />
-                <TextBlock x:Name="MovesText"
-                           FontSize="14"
-                           FontWeight="Bold" />
-              </StackPanel>
-            </Border>
-            <Border Grid.Column="1"
-                    Grid.Row="1"
-                    Classes="metricCard">
-              <StackPanel Spacing="3">
-                <TextBlock Text="Best / Par"
-                           FontSize="11"
-                           Foreground="#64748B" />
-                <TextBlock x:Name="BestText"
-                           FontSize="14"
-                           FontWeight="Bold" />
-              </StackPanel>
-            </Border>
-            <Border Grid.Column="0"
-                    Grid.Row="2"
-                    Classes="metricCard">
-              <StackPanel Spacing="3">
-                <TextBlock Text="Difficulty"
-                           FontSize="11"
-                           Foreground="#64748B" />
-                <TextBlock x:Name="DifficultyText"
-                           FontSize="14"
-                           FontWeight="Bold"
-                           TextWrapping="Wrap" />
-              </StackPanel>
-            </Border>
-            <Border Grid.Column="1"
-                    Grid.Row="2"
-                    Classes="metricCard">
-              <StackPanel Spacing="3">
-                <TextBlock Text="Mode"
-                           FontSize="11"
-                           Foreground="#64748B" />
-                <TextBlock x:Name="ModeText"
-                           FontSize="14"
-                           FontWeight="Bold"
-                           TextWrapping="Wrap" />
-              </StackPanel>
-            </Border>
-          </Grid>
-
-          <Border x:Name="ValidationBadge"
-                  Background="#1E1D4ED8"
-                  BorderBrush="#421D4ED8"
-                  BorderThickness="1"
-                  CornerRadius="20"
-                  Padding="10,5"
-                  HorizontalAlignment="Left">
-            <TextBlock x:Name="ValidationText"
+    <Grid Margin="20"
+          RowDefinitions="Auto,*,Auto">
+      <Border Grid.Row="0"
+              Classes="panel"
+              Padding="18">
+        <Grid ColumnDefinitions="1.9*,1.45*,1.05*"
+              ColumnSpacing="18">
+          <StackPanel Grid.Column="0"
+                      Spacing="6">
+            <TextBlock Text="CHAIN CHAPTERS"
+                       FontSize="12"
                        FontWeight="Bold"
+                       LetterSpacing="1.4"
                        Foreground="#1D4ED8" />
-          </Border>
+            <TextBlock x:Name="TitleText"
+                       FontFamily="Georgia"
+                       FontSize="30"
+                       FontWeight="SemiBold"
+                       Foreground="#0F172A" />
+            <TextBlock x:Name="SubtitleText"
+                       FontSize="18"
+                       FontWeight="SemiBold"
+                       Foreground="#475569" />
+            <TextBlock x:Name="DescriptionText"
+                       FontSize="14"
+                       Foreground="#334155"
+                       TextWrapping="Wrap" />
+          </StackPanel>
 
-          <Border x:Name="BoardReadCard"
-                  Classes="infoCard">
-            <StackPanel Spacing="6">
-              <TextBlock Text="Board Read"
+          <StackPanel Grid.Column="1"
+                      Spacing="10">
+            <WrapPanel Orientation="Horizontal"
+                       ItemWidth="156"
+                       MinHeight="104">
+              <Border Classes="metricCard"
+                      Width="150"
+                      Margin="0,0,8,8">
+                <StackPanel Spacing="3">
+                  <TextBlock Text="Progress"
+                             FontSize="11"
+                             Foreground="#64748B" />
+                  <TextBlock x:Name="ProgressText"
+                             FontSize="14"
+                             FontWeight="Bold" />
+                </StackPanel>
+              </Border>
+              <Border Classes="metricCard"
+                      Width="150"
+                      Margin="0,0,8,8">
+                <StackPanel Spacing="3">
+                  <TextBlock Text="Chapters Cleared"
+                             FontSize="11"
+                             Foreground="#64748B" />
+                  <TextBlock x:Name="CompletedText"
+                             FontSize="14"
+                             FontWeight="Bold" />
+                </StackPanel>
+              </Border>
+              <Border Classes="metricCard"
+                      Width="150"
+                      Margin="0,0,8,8">
+                <StackPanel Spacing="3">
+                  <TextBlock Text="Moves"
+                             FontSize="11"
+                             Foreground="#64748B" />
+                  <TextBlock x:Name="MovesText"
+                             FontSize="14"
+                             FontWeight="Bold" />
+                </StackPanel>
+              </Border>
+              <Border Classes="metricCard"
+                      Width="150"
+                      Margin="0,0,8,8">
+                <StackPanel Spacing="3">
+                  <TextBlock Text="Best / Par"
+                             FontSize="11"
+                             Foreground="#64748B" />
+                  <TextBlock x:Name="BestText"
+                             FontSize="14"
+                             FontWeight="Bold" />
+                </StackPanel>
+              </Border>
+              <Border Classes="metricCard"
+                      Width="150"
+                      Margin="0,0,8,8">
+                <StackPanel Spacing="3">
+                  <TextBlock Text="Difficulty"
+                             FontSize="11"
+                             Foreground="#64748B" />
+                  <TextBlock x:Name="DifficultyText"
+                             FontSize="14"
+                             FontWeight="Bold"
+                             TextWrapping="Wrap" />
+                </StackPanel>
+              </Border>
+              <Border Classes="metricCard"
+                      Width="150"
+                      Margin="0,0,8,8">
+                <StackPanel Spacing="3">
+                  <TextBlock Text="Mode"
+                             FontSize="11"
+                             Foreground="#64748B" />
+                  <TextBlock x:Name="ModeText"
+                             FontSize="14"
+                             FontWeight="Bold"
+                             TextWrapping="Wrap" />
+                </StackPanel>
+              </Border>
+            </WrapPanel>
+
+            <Border x:Name="ValidationBadge"
+                    HorizontalAlignment="Left"
+                    Background="#1E1D4ED8"
+                    BorderBrush="#421D4ED8"
+                    BorderThickness="1"
+                    CornerRadius="20"
+                    Padding="10,5">
+              <TextBlock x:Name="ValidationText"
+                         FontWeight="Bold"
+                         Foreground="#1D4ED8" />
+            </Border>
+          </StackPanel>
+
+          <StackPanel Grid.Column="2"
+                      Spacing="10">
+            <StackPanel Spacing="4">
+              <TextBlock Text="Jump To Chapter"
                          FontSize="11"
                          FontWeight="Bold"
                          Foreground="#64748B" />
-              <TextBlock x:Name="BoardReadText"
-                         FontSize="13"
-                         Foreground="#0F172A"
-                         TextWrapping="Wrap" />
+              <ComboBox x:Name="ChapterPicker"
+                        SelectionChanged="ChapterPicker_OnSelectionChanged" />
             </StackPanel>
-          </Border>
 
-          <Border x:Name="SelectionCard"
-                  Classes="infoCard accentCard">
-            <StackPanel Spacing="6">
-              <TextBlock Text="Selected Joint"
-                         FontSize="11"
-                         FontWeight="Bold"
-                         Foreground="#64748B" />
-              <TextBlock x:Name="SelectionText"
-                         FontSize="13"
-                         Foreground="#0F172A"
-                         TextWrapping="Wrap" />
-            </StackPanel>
-          </Border>
-
-          <Border Classes="infoCard">
-            <StackPanel Spacing="6">
-              <TextBlock Text="Method"
-                         FontSize="11"
-                         FontWeight="Bold"
-                         Foreground="#64748B" />
-              <TextBlock x:Name="ApproachText"
-                         FontSize="12"
-                         Foreground="#475569"
-                         TextWrapping="Wrap" />
-            </StackPanel>
-          </Border>
-
-          <Border x:Name="StatusCard"
-                  Classes="statusCard">
-            <StackPanel Spacing="6">
-              <TextBlock Text="Latest Read"
-                         FontSize="11"
-                         FontWeight="Bold"
-                         Foreground="#64748B" />
-              <TextBlock x:Name="StatusText"
-                         FontSize="15"
-                         FontWeight="SemiBold"
-                         Foreground="#0F172A"
-                         TextWrapping="Wrap" />
-            </StackPanel>
-          </Border>
-        </StackPanel>
-      </Border>
-
-      <Border Grid.Column="2"
-              VerticalAlignment="Top"
-              Classes="panel">
-        <StackPanel Spacing="12">
-          <Border Classes="infoCard">
-            <StackPanel Spacing="8">
-              <TextBlock Text="Navigation"
-                         FontSize="11"
-                         FontWeight="Bold"
-                         Foreground="#64748B" />
+            <Grid ColumnDefinitions="*,*"
+                  ColumnSpacing="10">
               <Button x:Name="PreviousButton"
+                      Grid.Column="0"
                       Classes="action secondary"
                       Content="Previous"
                       Click="PreviousButton_OnClick" />
               <Button x:Name="NextButton"
+                      Grid.Column="1"
                       Classes="action"
                       Content="Next"
                       Click="NextButton_OnClick" />
-              <Button x:Name="MenuButton"
-                      Classes="action secondary"
-                      Content="Menu"
-                      Click="MenuButton_OnClick" />
-            </StackPanel>
-          </Border>
+            </Grid>
 
-          <Border Classes="infoCard">
-            <StackPanel Spacing="8">
-              <TextBlock Text="Run Tools"
-                         FontSize="11"
-                         FontWeight="Bold"
-                         Foreground="#64748B" />
-              <Button x:Name="UndoButton"
-                      Classes="action secondary"
-                      Content="Undo"
-                      Click="UndoButton_OnClick" />
-              <Button x:Name="RedoButton"
-                      Classes="action secondary"
-                      Content="Redo"
-                      Click="RedoButton_OnClick" />
-              <Button x:Name="ResetButton"
-                      Classes="action secondary"
-                      Content="Reset"
-                      Click="ResetButton_OnClick" />
-              <Button x:Name="HintButton"
-                      Classes="action"
-                      Content="Nudge"
-                      Click="HintButton_OnClick" />
-            </StackPanel>
-          </Border>
-
-          <Border Classes="infoCard accentCard">
-            <StackPanel Spacing="8">
-              <TextBlock Text="Selected Joint"
-                         FontSize="11"
-                         FontWeight="Bold"
-                         Foreground="#64748B" />
-              <Button x:Name="RotateLeftButton"
-                      Classes="action"
-                      Content="Rotate Left"
-                      Click="RotateLeftButton_OnClick" />
-              <Button x:Name="RotateRightButton"
-                      Classes="action"
-                      Content="Rotate Right"
-                      Click="RotateRightButton_OnClick" />
-            </StackPanel>
-          </Border>
-
-          <Border Classes="infoCard">
-            <StackPanel Spacing="6">
-              <TextBlock Text="Controls"
-                         FontSize="11"
-                         FontWeight="Bold"
-                         Foreground="#64748B" />
-              <TextBlock TextWrapping="Wrap"
-                         Foreground="#475569"
-                         Text="Click near a joint, then drag or use Rotate Left/Right.&#10;Keyboard: Up/Down chooses a joint. A/D rotates. Ctrl+Z undoes, Ctrl+Y redoes. Nudge reveals a joint and direction, but does not move it for you." />
-            </StackPanel>
-          </Border>
-        </StackPanel>
+            <Button x:Name="MenuButton"
+                    Classes="action secondary"
+                    Content="Menu"
+                    Click="MenuButton_OnClick" />
+          </StackPanel>
+        </Grid>
       </Border>
+
+      <Grid Grid.Row="2"
+            ColumnDefinitions="390,*,270"
+            ColumnSpacing="18">
+        <Border Grid.Column="0"
+                Classes="panel"
+                Padding="16">
+          <StackPanel Spacing="10">
+            <Border x:Name="BoardReadCard"
+                    Classes="infoCard">
+              <StackPanel Spacing="6">
+                <TextBlock Text="Board Read"
+                           FontSize="11"
+                           FontWeight="Bold"
+                           Foreground="#64748B" />
+                <TextBlock x:Name="BoardReadText"
+                           FontSize="13"
+                           Foreground="#0F172A"
+                           TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+
+            <Border x:Name="SelectionCard"
+                    Classes="infoCard accentCard">
+              <StackPanel Spacing="6">
+                <TextBlock Text="Joint Preview"
+                           FontSize="11"
+                           FontWeight="Bold"
+                           Foreground="#64748B" />
+                <TextBlock x:Name="SelectionText"
+                           FontSize="13"
+                           Foreground="#0F172A"
+                           TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+
+            <Border Classes="infoCard">
+              <StackPanel Spacing="6">
+                <TextBlock Text="Method"
+                           FontSize="11"
+                           FontWeight="Bold"
+                           Foreground="#64748B" />
+                <TextBlock x:Name="ApproachText"
+                           FontSize="12"
+                           Foreground="#475569"
+                           TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+
+            <Border x:Name="StatusCard"
+                    Classes="statusCard">
+              <StackPanel Spacing="6">
+                <TextBlock Text="Latest Read"
+                           FontSize="11"
+                           FontWeight="Bold"
+                           Foreground="#64748B" />
+                <TextBlock x:Name="StatusText"
+                           FontSize="14"
+                           FontWeight="SemiBold"
+                           Foreground="#0F172A"
+                           TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </Border>
+
+        <Border Grid.Column="2"
+                Classes="panel"
+                Padding="16">
+          <StackPanel Spacing="10">
+            <Border Classes="infoCard">
+              <StackPanel Spacing="8">
+                <TextBlock Text="Run Tools"
+                           FontSize="11"
+                           FontWeight="Bold"
+                           Foreground="#64748B" />
+                <Button x:Name="UndoButton"
+                        Classes="action secondary"
+                        Content="Undo"
+                        Click="UndoButton_OnClick" />
+                <Button x:Name="RedoButton"
+                        Classes="action secondary"
+                        Content="Redo"
+                        Click="RedoButton_OnClick" />
+                <Button x:Name="ResetButton"
+                        Classes="action secondary"
+                        Content="Reset"
+                        Click="ResetButton_OnClick" />
+                <Button x:Name="HintButton"
+                        Classes="action"
+                        Content="Nudge"
+                        Click="HintButton_OnClick" />
+              </StackPanel>
+            </Border>
+
+            <Border Classes="infoCard accentCard">
+              <StackPanel Spacing="8">
+                <TextBlock Text="Selected Joint"
+                           FontSize="11"
+                           FontWeight="Bold"
+                           Foreground="#64748B" />
+                <Button x:Name="RotateLeftButton"
+                        Classes="action"
+                        Content="Rotate Left"
+                        Click="RotateLeftButton_OnClick" />
+                <Button x:Name="RotateRightButton"
+                        Classes="action"
+                        Content="Rotate Right"
+                        Click="RotateRightButton_OnClick" />
+              </StackPanel>
+            </Border>
+
+            <Border Classes="infoCard">
+              <StackPanel Spacing="6">
+                <TextBlock Text="Controls"
+                           FontSize="11"
+                           FontWeight="Bold"
+                           Foreground="#64748B" />
+                <TextBlock Text="Click near a joint, then drag or use Rotate Left/Right.&#10;Keyboard: Up/Down chooses a joint. A/D rotates. Ctrl+Z undoes, Ctrl+Y redoes. Nudge reveals a joint and direction, but does not move it for you."
+                           Foreground="#475569"
+                           TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </Border>
+      </Grid>
     </Grid>
   </Grid>
 </Window>

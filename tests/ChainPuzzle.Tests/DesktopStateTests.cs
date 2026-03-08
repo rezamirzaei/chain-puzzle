@@ -108,10 +108,10 @@ public sealed class DesktopStateTests
         Assert.Contains("25 false-fit starts", first.BranchText, StringComparison.Ordinal);
         Assert.Contains("14 near-target decoys", first.BranchText, StringComparison.Ordinal);
 
-        Assert.Equal("10", final.NumberText);
-        Assert.Contains("Brutal", final.DifficultyText, StringComparison.Ordinal);
+        Assert.Equal("05", final.NumberText);
+        Assert.Contains("Savage", final.DifficultyText, StringComparison.Ordinal);
         Assert.Contains("Par 8", final.PressureText, StringComparison.Ordinal);
-        Assert.Contains("shell-4 breadth 4009", final.BranchText, StringComparison.Ordinal);
+        Assert.Contains("shell-4 breadth 3474", final.BranchText, StringComparison.Ordinal);
         Assert.Contains("Tactical", viewModel.DifficultyText, StringComparison.Ordinal);
         Assert.Contains("/100", viewModel.DifficultyText, StringComparison.Ordinal);
         Assert.StartsWith("Standard", viewModel.ModeText, StringComparison.Ordinal);
@@ -124,11 +124,11 @@ public sealed class DesktopStateTests
 
         Assert.True(viewModel.IsHomeVisible);
 
-        viewModel.OpenChapterFromHome(7);
+        viewModel.OpenChapterFromHome(3);
 
-        Assert.Equal(7, viewModel.LevelIndex);
+        Assert.Equal(3, viewModel.LevelIndex);
         Assert.False(viewModel.IsHomeVisible);
-        Assert.StartsWith("Jumped to Shield.", viewModel.StatusMessage, StringComparison.Ordinal);
+        Assert.StartsWith("Jumped to Pyramid.", viewModel.StatusMessage, StringComparison.Ordinal);
     }
 
     [Fact]

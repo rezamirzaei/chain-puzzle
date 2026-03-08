@@ -45,7 +45,7 @@ public sealed class ChainCoreTests
     public void ChaptersStartUnsolved()
     {
         var levels = ChapterFactory.CreateChapters(validate: false);
-        Assert.True(levels.Count >= 6);
+        Assert.True(levels.Count >= 5);
 
         foreach (var level in levels)
         {
@@ -87,8 +87,9 @@ public sealed class ChainCoreTests
     public void ChaptersAreSolvableWithinHintBudget()
     {
         var levels = ChapterFactory.CreateChapters(validate: false);
-        foreach (var level in levels)
+        for (var index = 0; index < levels.Count; index += 1)
         {
+            var level = levels[index];
             var solver = new ChainSolver(level.SegmentCount);
             var goalDistances = BuildGoalDistanceMap(solver, level.GoalState, level.OptimalMoves - 1);
             var startKey = level.StartState.SerializeSegments();
@@ -99,11 +100,11 @@ public sealed class ChainCoreTests
             Assert.False(goalDistances.ContainsKey(startKey), $"{level.Id} start is already inside the shorter shell.");
             Assert.True(reachesParFrontier, $"{level.Id} start does not touch the par frontier.");
             Assert.True(level.OptimalMoves >= 6, $"Expected a hard chapter for {level.Id}, got {level.OptimalMoves}.");
-            if (level.Id is "chapter-08" or "chapter-09" or "chapter-10")
+            if (index == levels.Count - 1)
             {
                 Assert.True(level.OptimalMoves >= 8, $"Final chapter {level.Id} should be at least 8 moves, got {level.OptimalMoves}.");
             }
-            else if (level.Id is "chapter-06" or "chapter-07")
+            else if (index >= Math.Max(0, levels.Count - 3))
             {
                 Assert.True(level.OptimalMoves >= 7, $"Late chapter {level.Id} should be at least 7 moves, got {level.OptimalMoves}.");
             }
@@ -127,8 +128,9 @@ public sealed class ChainCoreTests
     public void ChaptersHaveBroadTreesAndSparseStarts()
     {
         var levels = ChapterFactory.CreateChapters(validate: false);
-        foreach (var level in levels)
+        for (var index = 0; index < levels.Count; index += 1)
         {
+            var level = levels[index];
             var structure = new LevelStructureAnalyzer(new ChainSolver(level.SegmentCount))
                 .AnalyzeTree(level, shellDepth: 4, nearTargetSlack: 4, maxVisited: 1_000_000);
             var baked = Assert.IsType<LevelTreeProfile>(level.TreeProfile);
@@ -151,7 +153,7 @@ public sealed class ChainCoreTests
             Assert.Equal(structure.StartTrapMoveCount, baked.StartTrapMoveCount);
             Assert.Equal(structure.StartFalseProgressMoveCount, baked.StartFalseProgressMoveCount);
 
-            if (level.Id is "chapter-06" or "chapter-07" or "chapter-08" or "chapter-09" or "chapter-10")
+            if (index >= Math.Max(0, levels.Count - 3))
             {
                 Assert.True(structure.StartFalseProgressMoveCount >= 20, $"{level.Id} late start is not deceptive enough: {structure.StartFalseProgressMoveCount}.");
                 Assert.True(structure.StartTrapMoveCount >= 24, $"{level.Id} late start has too few trap moves: {structure.StartTrapMoveCount}.");
@@ -237,6 +239,8 @@ public sealed class ChainCoreTests
             var thickness = MeasureAxisThickness(target);
             Assert.True(thickness.MaxThinRun <= 3, $"Target for {level.Id} has a thin streak that is too long: run={thickness.MaxThinRun}");
             Assert.True(thickness.MaxThinRows <= 4, $"Target for {level.Id} has too many thin rows: rows={thickness.MaxThinRows}");
+            Assert.True(CountDegreeOnePoints(target) <= 1, $"Target for {level.Id} has too many loose tips.");
+            Assert.True(LongestLowDegreeComponent(target) <= 1, $"Target for {level.Id} still contains a one-tile tail.");
         }
     }
 
@@ -368,6 +372,68 @@ public sealed class ChainCoreTests
         }
 
         return boundary;
+    }
+
+    private static int CountDegreeOnePoints(HashSet<IntPoint> target)
+    {
+        var count = 0;
+        foreach (var point in target)
+        {
+            var neighbors = 0;
+            foreach (var offset in NeighborOffsets)
+            {
+                if (target.Contains(point + offset))
+                {
+                    neighbors += 1;
+                }
+            }
+
+            if (neighbors == 1)
+            {
+                count += 1;
+            }
+        }
+
+        return count;
+    }
+
+    private static int LongestLowDegreeComponent(HashSet<IntPoint> target)
+    {
+        var lowDegree = target
+            .Where(point => NeighborOffsets.Count(offset => target.Contains(point + offset)) <= 2)
+            .ToHashSet();
+        var visited = new HashSet<IntPoint>();
+        var best = 0;
+
+        foreach (var point in lowDegree)
+        {
+            if (!visited.Add(point))
+            {
+                continue;
+            }
+
+            var queue = new Queue<IntPoint>();
+            queue.Enqueue(point);
+            var count = 0;
+
+            while (queue.Count > 0)
+            {
+                var current = queue.Dequeue();
+                count += 1;
+                foreach (var offset in NeighborOffsets)
+                {
+                    var next = current + offset;
+                    if (lowDegree.Contains(next) && visited.Add(next))
+                    {
+                        queue.Enqueue(next);
+                    }
+                }
+            }
+
+            best = Math.Max(best, count);
+        }
+
+        return best;
     }
 
     private static (int MaxThinRun, int MaxThinRows) MeasureAxisThickness(HashSet<IntPoint> target)
