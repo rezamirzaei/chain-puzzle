@@ -131,6 +131,7 @@ public sealed class ChainCoreTests
         {
             var structure = new LevelStructureAnalyzer(new ChainSolver(level.SegmentCount))
                 .AnalyzeTree(level, shellDepth: 4, nearTargetSlack: 4, maxVisited: 1_000_000);
+            var baked = Assert.IsType<LevelTreeProfile>(level.TreeProfile);
 
             Assert.Equal(1, structure.GoalShellCounts[0]);
             Assert.True(structure.GoalShellCounts[1] >= 7, $"{level.Id} shell-1 width is too small: {structure.GoalShellCounts[1]}.");
@@ -141,6 +142,14 @@ public sealed class ChainCoreTests
             Assert.True(structure.StartTrapMoveCount >= 20, $"{level.Id} start has too few trap moves: {structure.StartTrapMoveCount}.");
             Assert.True(structure.StartCloserMoveCount <= 6, $"{level.Id} start has too many obvious improving moves: {structure.StartCloserMoveCount}.");
             Assert.True(structure.StartFalseProgressMoveCount >= 12, $"{level.Id} start has too few deceptive false-progress moves: {structure.StartFalseProgressMoveCount}.");
+            Assert.Equal(structure.GoalShellCounts, baked.GoalShellCounts);
+            Assert.Equal(structure.NearTargetDecoyCount, baked.NearTargetDecoyCount);
+            Assert.Equal(structure.BestDecoyOverlap, baked.BestDecoyOverlap);
+            Assert.Equal(structure.StartOverlap, baked.StartOverlap);
+            Assert.Equal(structure.StartLegalMoveCount, baked.StartLegalMoveCount);
+            Assert.Equal(structure.StartCloserMoveCount, baked.StartCloserMoveCount);
+            Assert.Equal(structure.StartTrapMoveCount, baked.StartTrapMoveCount);
+            Assert.Equal(structure.StartFalseProgressMoveCount, baked.StartFalseProgressMoveCount);
 
             if (level.Id is "chapter-06" or "chapter-07" or "chapter-08" or "chapter-09" or "chapter-10")
             {

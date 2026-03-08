@@ -178,16 +178,23 @@
                     BorderThickness="1"
                     Padding="14">
               <Grid RowDefinitions="Auto,*">
-                <TextBlock Text="Chapter Gallery"
-                           FontSize="14"
-                           FontWeight="Bold"
-                           Foreground="#0F172A" />
+                <StackPanel>
+                  <TextBlock Text="Chapter Gallery"
+                             FontSize="14"
+                             FontWeight="Bold"
+                             Foreground="#0F172A" />
+                  <TextBlock Margin="0,4,0,0"
+                             Text="Click a card to jump straight into that chapter. Each card shows par, trap pressure, and near-target branch width."
+                             FontSize="12"
+                             Foreground="#64748B"
+                             TextWrapping="Wrap" />
+                </StackPanel>
                 <ScrollViewer Grid.Row="1"
                               Margin="0,12,0,0"
                               VerticalScrollBarVisibility="Auto">
                   <WrapPanel x:Name="HomeChapterGallery"
-                             ItemWidth="250"
-                             ItemHeight="208"
+                             ItemWidth="256"
+                             ItemHeight="264"
                              Orientation="Horizontal" />
                 </ScrollViewer>
               </Grid>

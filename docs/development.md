@@ -10,6 +10,9 @@ a pointy-top axial hex grid.
 - `TargetCoverCounter` verifies how many ways the fixed segment-length sequence
   can cover a given target silhouette.
 - `ChapterFactory` ships the authored chapter data.
+- authored chapters also carry a baked `LevelTreeProfile` so the desktop UI can
+  show real trap/decoy pressure without recomputing expensive structure analysis
+  on startup.
 
 The solved condition is not “match one exact hidden pose”. A chapter is solved
 when the current chain covers the chapter target point set exactly.
@@ -40,6 +43,7 @@ The desktop project currently uses a pragmatic split:
   - settings
   - chapter navigation
   - medal computation
+  - chapter gallery card data
   - hint orchestration
 - `MainWindow`
   - input events
@@ -50,6 +54,10 @@ The desktop project currently uses a pragmatic split:
   - board rendering
 - `ShapePreviewControl`
   - chapter gallery silhouette rendering
+
+The home gallery is not decorative. Its cards are expected to be actionable and
+to show authored difficulty signals such as par, trap count, false-progress
+count, and branch width.
 
 That split keeps puzzle logic out of the window while still avoiding a large UI
 framework refactor.

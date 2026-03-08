@@ -14,6 +14,7 @@ public static class ChapterFactory
         string Description,
         string AccentHex,
         int OptimalMoves,
+        LevelTreeProfile TreeProfile,
         int[] GoalDirections,
         int[] StartDirections);
 
@@ -35,6 +36,7 @@ public static class ChapterFactory
             "Fit the mixed 1/2/3-link loop into the fir-tree pattern.",
             "#d97706",
             6,
+            Profile(new[] { 1, 9, 73, 463, 2650 }, 14, 36, 4, 30, 5, 25, 25),
             new[] { 5, 5, 5, 3, 4, 2, 1, 5, 4, 0, 2, 2, 4, 4, 5, 3, 1, 1, 1 },
             new[] { 5, 0, 0, 4, 5, 5, 4, 2, 1, 3, 4, 4, 5, 5, 0, 5, 3, 3, 3 }),
         new(
@@ -44,6 +46,7 @@ public static class ChapterFactory
             "Broad rows hide the route; the shape looks open, but only one full cover survives the turns.",
             "#ef4444",
             6,
+            Profile(new[] { 1, 14, 125, 912, 5496 }, 26, 36, 4, 33, 4, 29, 29),
             new[] { 4, 0, 1, 1, 2, 4, 4, 4, 3, 1, 2, 1, 3, 3, 5, 3, 1, 0, 0 },
             new[] { 4, 4, 5, 5, 0, 0, 0, 0, 5, 4, 5, 4, 0, 0, 2, 0, 5, 4, 4 }),
         new(
@@ -53,6 +56,7 @@ public static class ChapterFactory
             "The body is dense and readable, but the wrong fold still burns the only winning route.",
             "#0ea5e9",
             6,
+            Profile(new[] { 1, 14, 115, 744, 4093 }, 24, 37, 4, 29, 4, 25, 25),
             new[] { 1, 5, 4, 4, 2, 1, 1, 2, 4, 4, 2, 3, 5, 3, 1, 3, 5, 3, 5 },
             new[] { 1, 2, 1, 1, 0, 5, 5, 0, 1, 1, 5, 0, 1, 5, 3, 5, 1, 5, 1 }),
         new(
@@ -62,6 +66,7 @@ public static class ChapterFactory
             "A wide top and thick middle make the silhouette fair, but the last lanes are still unforgiving.",
             "#22c55e",
             6,
+            Profile(new[] { 1, 10, 86, 604, 3653 }, 19, 37, 4, 31, 2, 29, 29),
             new[] { 5, 1, 2, 2, 4, 5, 5, 4, 2, 2, 2, 1, 3, 3, 5, 4, 0, 4, 0 },
             new[] { 5, 0, 1, 1, 3, 2, 2, 2, 1, 1, 1, 0, 2, 2, 3, 2, 4, 2, 4 }),
         new(
@@ -71,6 +76,7 @@ public static class ChapterFactory
             "The middle looks roomy. It is not. One careless hinge blocks the only clean cover.",
             "#8b5cf6",
             6,
+            Profile(new[] { 1, 11, 94, 642, 3719 }, 17, 37, 4, 29, 3, 26, 26),
             new[] { 3, 3, 5, 0, 4, 5, 1, 3, 1, 0, 4, 4, 5, 3, 1, 2, 2, 3, 5 },
             new[] { 3, 2, 3, 4, 2, 3, 4, 0, 5, 5, 3, 3, 4, 2, 1, 2, 2, 3, 5 }),
         new(
@@ -80,6 +86,7 @@ public static class ChapterFactory
             "Most of the shape is thick and honest; the punishment comes from the wrong internal order.",
             "#f59e0b",
             7,
+            Profile(new[] { 1, 12, 97, 613, 3266 }, 20, 36, 4, 27, 3, 24, 24),
             new[] { 0, 5, 5, 3, 2, 0, 2, 4, 3, 1, 3, 4, 5, 4, 0, 4, 2, 1, 2 },
             new[] { 0, 0, 0, 5, 4, 2, 4, 5, 0, 4, 5, 0, 1, 0, 2, 0, 5, 4, 5 }),
         new(
@@ -89,6 +96,7 @@ public static class ChapterFactory
             "Compact and brutal: broad rows, very few obvious improvements, and many ways to jam the finish.",
             "#14b8a6",
             7,
+            Profile(new[] { 1, 12, 93, 551, 2948 }, 27, 37, 4, 32, 4, 28, 28),
             new[] { 1, 0, 4, 4, 3, 1, 1, 3, 4, 4, 4, 0, 0, 4, 3, 5, 1, 1, 5 },
             new[] { 1, 1, 0, 0, 5, 5, 5, 5, 0, 0, 0, 2, 2, 0, 5, 0, 2, 2, 0 }),
         new(
@@ -98,6 +106,7 @@ public static class ChapterFactory
             "The shield is thick enough to read at a glance, but a bad turn still leaves no recovery lane.",
             "#ec4899",
             8,
+            Profile(new[] { 1, 11, 93, 657, 3961 }, 9, 37, 4, 34, 6, 28, 28),
             new[] { 5, 0, 1, 3, 2, 1, 1, 1, 5, 4, 4, 0, 0, 1, 2, 4, 3, 1, 1 },
             new[] { 5, 5, 5, 1, 0, 5, 5, 0, 5, 4, 4, 0, 5, 0, 1, 1, 0, 5, 5 }),
         new(
@@ -107,6 +116,7 @@ public static class ChapterFactory
             "Wide walls make the target fair. The hard part is keeping the chain order alive through the center.",
             "#4b5563",
             8,
+            Profile(new[] { 1, 9, 80, 606, 3474 }, 30, 37, 5, 29, 5, 24, 24),
             new[] { 2, 4, 4, 2, 1, 5, 1, 3, 2, 0, 1, 5, 5, 1, 5, 4, 4, 2, 4 },
             new[] { 2, 2, 2, 1, 0, 5, 1, 2, 2, 0, 1, 0, 0, 2, 0, 5, 5, 4, 0 }),
         new(
@@ -116,6 +126,7 @@ public static class ChapterFactory
             "Final exam: the shape is solid, the path is not. One wrong hinge and the harbor seals shut.",
             "#84cc16",
             8,
+            Profile(new[] { 1, 11, 94, 674, 4009 }, 17, 36, 4, 33, 6, 27, 27),
             new[] { 0, 1, 3, 2, 4, 5, 3, 2, 0, 2, 4, 5, 0, 0, 4, 3, 3, 4, 5 },
             new[] { 0, 5, 0, 5, 0, 1, 5, 5, 3, 5, 5, 0, 1, 1, 0, 5, 5, 0, 1 })
     };
@@ -178,6 +189,7 @@ public static class ChapterFactory
             goalState,
             startState,
             blueprint.OptimalMoves,
+            treeProfile: blueprint.TreeProfile,
             targetPoints: goalState.GetPoints().ToArray());
 
         if (!validate)
@@ -204,6 +216,27 @@ public static class ChapterFactory
         }
 
         return new ChainState(segments);
+    }
+
+    private static LevelTreeProfile Profile(
+        int[] goalShellCounts,
+        int nearTargetDecoyCount,
+        int bestDecoyOverlap,
+        int startOverlap,
+        int startLegalMoveCount,
+        int startCloserMoveCount,
+        int startTrapMoveCount,
+        int startFalseProgressMoveCount)
+    {
+        return new LevelTreeProfile(
+            goalShellCounts,
+            nearTargetDecoyCount,
+            bestDecoyOverlap,
+            startOverlap,
+            startLegalMoveCount,
+            startCloserMoveCount,
+            startTrapMoveCount,
+            startFalseProgressMoveCount);
     }
 
     private static Direction ToDirection(int index)

@@ -18,6 +18,7 @@ public sealed class ChainLevel
         ChainState startState,
         int optimalMoves,
         LevelValidation? validation = null,
+        LevelTreeProfile? treeProfile = null,
         IReadOnlyList<IntPoint>? targetPoints = null)
     {
         Id = id;
@@ -29,6 +30,7 @@ public sealed class ChainLevel
         StartState = startState;
         OptimalMoves = optimalMoves;
         Validation = validation;
+        TreeProfile = treeProfile;
         TargetPoints = targetPoints?.ToArray() ?? goalState.GetPoints().ToArray();
         _targetPointSet = TargetPoints.ToHashSet();
     }
@@ -50,6 +52,8 @@ public sealed class ChainLevel
     public int OptimalMoves { get; }
 
     public LevelValidation? Validation { get; }
+
+    public LevelTreeProfile? TreeProfile { get; }
 
     public IReadOnlyList<IntPoint> TargetPoints { get; }
 
@@ -138,6 +142,7 @@ public sealed class ChainLevel
             StartState,
             OptimalMoves,
             validation,
+            TreeProfile,
             TargetPoints);
     }
 }

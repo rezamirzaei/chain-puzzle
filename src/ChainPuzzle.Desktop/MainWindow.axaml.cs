@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -40,6 +41,7 @@ public partial class MainWindow : Window
     private readonly Border _homeOverlay;
     private readonly Border _validationBadge;
     private readonly Border _solvedCard;
+    private readonly WrapPanel _homeChapterGallery;
     private readonly TextBlock _homeTitleText;
     private readonly TextBlock _homeSummaryText;
     private readonly TextBlock _homeProgressText;
@@ -89,6 +91,7 @@ public partial class MainWindow : Window
         _homeOverlay = GetRequiredControl<Border>("HomeOverlay");
         _validationBadge = GetRequiredControl<Border>("ValidationBadge");
         _solvedCard = GetRequiredControl<Border>("SolvedCard");
+        _homeChapterGallery = GetRequiredControl<WrapPanel>("HomeChapterGallery");
         _homeTitleText = GetRequiredControl<TextBlock>("HomeTitleText");
         _homeSummaryText = GetRequiredControl<TextBlock>("HomeSummaryText");
         _homeProgressText = GetRequiredControl<TextBlock>("HomeProgressText");
@@ -203,7 +206,171 @@ public partial class MainWindow : Window
         _chapterPicker.SelectedIndex = _vm.ChapterPickerSelectedIndex;
         _isSyncingPicker = false;
 
+        SyncHomeChapterGallery();
         RenderFrame();
+    }
+
+    private void SyncHomeChapterGallery()
+    {
+        _homeChapterGallery.Children.Clear();
+        foreach (var card in _vm.ChapterCards)
+        {
+            _homeChapterGallery.Children.Add(BuildChapterCard(card));
+        }
+    }
+
+    private Button BuildChapterCard(ChapterGalleryCard card)
+    {
+        var accent = ParseColor(card.AccentHex, Colors.SteelBlue);
+        var background = new SolidColorBrush(card.IsCurrent
+            ? Color.FromArgb(24, accent.R, accent.G, accent.B)
+            : Colors.White);
+        var borderBrush = new SolidColorBrush(card.IsCurrent
+            ? accent
+            : ParseColor("#D1D5DB", Colors.LightGray));
+        var mutedBrush = new SolidColorBrush(ParseColor("#64748B", Colors.Gray));
+        var titleBrush = new SolidColorBrush(ParseColor("#0F172A", Colors.Black));
+        var accentBrush = new SolidColorBrush(accent);
+        var (medalBackground, medalBorder, medalForeground) = GetMedalBrushes(card.MedalLabel);
+
+        var preview = new ShapePreviewControl
+        {
+            Height = 92,
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        };
+        preview.UpdatePreview(card.TargetPoints, card.AccentHex, card.IsCurrent);
+
+        var header = new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions("*,Auto"),
+            ColumnSpacing = 8
+        };
+
+        var chapterText = new TextBlock
+        {
+            Text = $"Chapter {card.NumberText}",
+            FontSize = 11,
+            FontWeight = FontWeight.Bold,
+            Foreground = accentBrush
+        };
+        header.Children.Add(chapterText);
+
+        var medalChip = new Border
+        {
+            Background = medalBackground,
+            BorderBrush = medalBorder,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(999),
+            Padding = new Thickness(8, 3),
+            Child = new TextBlock
+            {
+                Text = card.MedalLabel,
+                FontSize = 11,
+                FontWeight = FontWeight.Bold,
+                Foreground = medalForeground
+            }
+        };
+        Grid.SetColumn(medalChip, 1);
+        header.Children.Add(medalChip);
+
+        var cardContent = new StackPanel
+        {
+            Spacing = 8,
+            Children =
+            {
+                header,
+                new TextBlock
+                {
+                    Text = card.Subtitle,
+                    FontSize = 18,
+                    FontWeight = FontWeight.SemiBold,
+                    Foreground = titleBrush
+                },
+                new Border
+                {
+                    Background = new SolidColorBrush(Color.FromArgb(12, accent.R, accent.G, accent.B)),
+                    BorderBrush = new SolidColorBrush(Color.FromArgb(40, accent.R, accent.G, accent.B)),
+                    BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(12),
+                    Padding = new Thickness(6),
+                    Child = preview
+                },
+                new TextBlock
+                {
+                    Text = card.BestText,
+                    FontSize = 13,
+                    FontWeight = FontWeight.Bold,
+                    Foreground = titleBrush
+                },
+                new TextBlock
+                {
+                    Text = card.PressureText,
+                    FontSize = 12,
+                    Foreground = mutedBrush
+                },
+                new TextBlock
+                {
+                    Text = card.BranchText,
+                    FontSize = 11,
+                    Foreground = mutedBrush,
+                    TextWrapping = TextWrapping.Wrap
+                }
+            }
+        };
+
+        var button = new Button
+        {
+            Classes = { "chapterCard" },
+            Background = background,
+            BorderBrush = borderBrush,
+            BorderThickness = new Thickness(card.IsCurrent ? 2 : 1),
+            CornerRadius = new CornerRadius(16),
+            Padding = new Thickness(12),
+            HorizontalContentAlignment = HorizontalAlignment.Stretch,
+            VerticalContentAlignment = VerticalAlignment.Stretch,
+            Content = cardContent
+        };
+
+        button.Click += (_, _) =>
+        {
+            if (_vm.IsBusy)
+            {
+                return;
+            }
+
+            ClearTransientVisualState();
+            _vm.OpenChapterFromHome(card.Index);
+        };
+
+        return button;
+    }
+
+    private static (IBrush Background, IBrush Border, IBrush Foreground) GetMedalBrushes(string medalLabel)
+    {
+        return medalLabel switch
+        {
+            "Gold" => Brushes(
+                Color.FromArgb(255, 254, 243, 199),
+                Color.FromArgb(255, 245, 158, 11),
+                Color.FromArgb(255, 146, 64, 14)),
+            "Silver" => Brushes(
+                Color.FromArgb(255, 226, 232, 240),
+                Color.FromArgb(255, 148, 163, 184),
+                Color.FromArgb(255, 51, 65, 85)),
+            "Bronze" => Brushes(
+                Color.FromArgb(255, 245, 224, 211),
+                Color.FromArgb(255, 192, 132, 87),
+                Color.FromArgb(255, 124, 45, 18)),
+            _ => Brushes(
+                Color.FromArgb(255, 248, 250, 252),
+                Color.FromArgb(255, 203, 213, 225),
+                Color.FromArgb(255, 71, 85, 105))
+        };
+
+        static (IBrush Background, IBrush Border, IBrush Foreground) Brushes(Color background, Color border, Color foreground)
+        {
+            return (new SolidColorBrush(background), new SolidColorBrush(border), new SolidColorBrush(foreground));
+        }
     }
 
     // =====================

@@ -77,6 +77,7 @@ public sealed partial class GameViewModel : ObservableObject
 
     public ChapterGame Game => _game;
     public IReadOnlyList<ChainLevel> Levels => _game.Levels;
+    public IReadOnlyList<ChapterGalleryCard> ChapterCards => BuildChapterCards();
     public ChainLevel CurrentLevel => _game.CurrentLevel;
     public ChainState CurrentState => _game.CurrentState;
     public int LevelIndex => _game.LevelIndex;
@@ -290,6 +291,23 @@ public sealed partial class GameViewModel : ObservableObject
     {
         if (index < 0 || index == LevelIndex) return;
         ChangeLevel(index);
+    }
+
+    public void OpenChapterFromHome(int index)
+    {
+        if (index < 0 || index >= Levels.Count || IsBusy)
+        {
+            return;
+        }
+
+        if (index != LevelIndex)
+        {
+            ChangeLevel(index);
+        }
+
+        HideHome();
+        StatusMessage = $"Jumped to {CurrentLevel.Subtitle}.";
+        RefreshAll();
     }
 
     public void SelectJoint(int? jointIndex)
@@ -568,10 +586,10 @@ public sealed partial class GameViewModel : ObservableObject
             : hasRun ? "Continue Your Run" : "Start A New Run";
 
         HomeSummary = HomeAllowsClose
-            ? $"Current chapter: {current}. Resume, jump chapters, or wipe the run and start clean."
+            ? $"Current chapter: {current}. Resume, jump with the gallery cards, or wipe the run and start clean."
             : hasRun
-                ? $"Progress is loaded and ready. Continue from {current}, or wipe the board and begin from Chapter 1."
-                : "A fresh puzzle run is ready. Learn the chain on the early boards, then chase par on the later shapes.";
+                ? $"Progress is loaded and ready. Continue from {current}, or jump to another chapter from the gallery."
+                : "A fresh puzzle run is ready. Learn the chain on the early boards, then chase par on the later shapes from the gallery.";
 
         HomeProgressInfo = $"{_game.CompletedLevelIds.Count}/{Levels.Count} chapters cleared\nCurrent: {current}";
         HomeBestInfo = _bestMovesByLevelId.Count > 0
@@ -597,6 +615,40 @@ public sealed partial class GameViewModel : ObservableObject
         HomeSecondaryVisible = HomeAllowsClose || hasRun;
     }
 
+    private ChapterGalleryCard[] BuildChapterCards()
+    {
+        return Levels.Select((level, index) =>
+        {
+            var hasBest = _bestMovesByLevelId.TryGetValue(level.Id, out var bestMoves);
+            var bestText = hasBest
+                ? $"Best {bestMoves}/{level.OptimalMoves}"
+                : _game.CompletedLevelIds.Contains(level.Id)
+                    ? $"Cleared above par {level.OptimalMoves}"
+                    : $"No clear yet";
+
+            var profile = level.TreeProfile;
+            var pressureText = profile is null
+                ? $"Par {level.OptimalMoves}"
+                : $"Par {level.OptimalMoves} • traps {profile.StartTrapMoveCount} • false {profile.StartFalseProgressMoveCount}";
+            var branchText = profile is null
+                ? "No branch profile baked in"
+                : $"Decoys {profile.NearTargetDecoyCount} • shell-4 {profile.GoalShellCounts[^1]}";
+
+            return new ChapterGalleryCard(
+                index,
+                $"{index + 1:00}",
+                level.Subtitle,
+                level.AccentHex,
+                level.TargetPoints,
+                index == LevelIndex,
+                _game.CompletedLevelIds.Contains(level.Id),
+                BuildMedalLabel(level.OptimalMoves, hasBest, bestMoves),
+                bestText,
+                pressureText,
+                branchText);
+        }).ToArray();
+    }
+
     private void UpdateChapterPickerItems()
     {
         ChapterPickerItems = Levels.Select((level, index) =>
@@ -607,6 +659,22 @@ public sealed partial class GameViewModel : ObservableObject
             return $"{marker} {index + 1:00}. {level.Subtitle}{bestSuffix}";
         }).ToArray();
         ChapterPickerSelectedIndex = LevelIndex;
+    }
+
+    private static string BuildMedalLabel(int optimal, bool hasBest, int best)
+    {
+        if (!hasBest)
+        {
+            return "Open";
+        }
+
+        var delta = best - optimal;
+        if (delta <= 0)
+        {
+            return "Gold";
+        }
+
+        return delta == 1 ? "Silver" : "Bronze";
     }
 
     private string BuildBadgeText(int optimal, bool hasBest, int best)

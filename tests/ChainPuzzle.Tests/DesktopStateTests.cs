@@ -63,6 +63,42 @@ public sealed class DesktopStateTests
     }
 
     [Fact]
+    public void GameViewModel_ChapterCardsExposeProgressAndBranchMetrics()
+    {
+        var viewModel = CreateViewModel(new InMemoryProgressStore(), new InMemorySettingsStore());
+
+        Assert.Equal(viewModel.Levels.Count, viewModel.ChapterCards.Count);
+
+        var first = viewModel.ChapterCards[0];
+        var final = viewModel.ChapterCards[^1];
+
+        Assert.True(first.IsCurrent);
+        Assert.Equal("Open", first.MedalLabel);
+        Assert.Equal("01", first.NumberText);
+        Assert.Contains("Par 6", first.PressureText, StringComparison.Ordinal);
+        Assert.Contains("traps 25", first.PressureText, StringComparison.Ordinal);
+        Assert.Contains("Decoys 14", first.BranchText, StringComparison.Ordinal);
+
+        Assert.Equal("10", final.NumberText);
+        Assert.Contains("Par 8", final.PressureText, StringComparison.Ordinal);
+        Assert.Contains("shell-4 4009", final.BranchText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void GameViewModel_OpenChapterFromHome_JumpsAndClosesOverlay()
+    {
+        var viewModel = CreateViewModel(new InMemoryProgressStore(), new InMemorySettingsStore());
+
+        Assert.True(viewModel.IsHomeVisible);
+
+        viewModel.OpenChapterFromHome(7);
+
+        Assert.Equal(7, viewModel.LevelIndex);
+        Assert.False(viewModel.IsHomeVisible);
+        Assert.Equal("Jumped to Shield.", viewModel.StatusMessage);
+    }
+
+    [Fact]
     public void GameProgressStore_Load_MigratesVersion4Document()
     {
         var rootDirectory = CreateTempDirectory();
