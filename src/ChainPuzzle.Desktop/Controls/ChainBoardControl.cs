@@ -22,6 +22,7 @@ public sealed class ChainBoardControl : Control
     private int? _activeJointIndex;
     private Color _accentColor = ParseColor("#f48c06", Colors.Orange);
     private bool _isSolved;
+    private double _celebrationProgress;
 
     private double _scale = 1d;
     private double _offsetX;
@@ -60,7 +61,8 @@ public sealed class ChainBoardControl : Control
         IReadOnlyList<IntPoint> targetPoints,
         int? activeJointIndex,
         string accentHex,
-        bool isSolved)
+        bool isSolved,
+        double celebrationProgress = 0d)
     {
         _chainPoints.Clear();
         _chainPoints.AddRange(chainPoints);
@@ -96,6 +98,7 @@ public sealed class ChainBoardControl : Control
 
         _activeJointIndex = activeJointIndex;
         _isSolved = isSolved;
+        _celebrationProgress = Math.Clamp(celebrationProgress, 0d, 1d);
         _accentColor = ParseColor(accentHex, _accentColor);
 
         RecalculateTransform();
@@ -149,6 +152,7 @@ public sealed class ChainBoardControl : Control
         DrawBackground(context);
         DrawTarget(context);
         DrawChain(context);
+        DrawCelebration(context);
     }
 
     private void RecalculateTransform()
@@ -239,9 +243,12 @@ public sealed class ChainBoardControl : Control
         }
 
         EnsureTargetBrushes();
-        var glowRadius = _scale * 0.64;
-        var tileRadius = _scale * 0.585;
-        var highlightRadius = _scale * 0.36;
+        var pulse = 1d + (_celebrationProgress > 0d
+            ? Math.Sin(_celebrationProgress * Math.PI * 6d) * (1d - _celebrationProgress) * 0.09d
+            : 0d);
+        var glowRadius = _scale * (0.64 + (_celebrationProgress * 0.08)) * pulse;
+        var tileRadius = _scale * 0.585 * pulse;
+        var highlightRadius = _scale * (0.36 + (_celebrationProgress * 0.02));
 
         foreach (var point in _targetPoints)
         {
@@ -280,6 +287,17 @@ public sealed class ChainBoardControl : Control
         }
 
         EnsureChainBrushes();
+        var celebrationGlowPen = _celebrationProgress > 0d
+            ? new Pen(
+                new SolidColorBrush(Color.FromArgb(
+                    (byte)(50 + (_celebrationProgress * 70)),
+                    _accentColor.R,
+                    _accentColor.G,
+                    _accentColor.B)),
+                34 + (_celebrationProgress * 6),
+                lineCap: PenLineCap.Round,
+                lineJoin: PenLineJoin.Round)
+            : null;
 
         for (var index = 0; index < _segmentSpans.Count; index += 1)
         {
@@ -293,6 +311,11 @@ public sealed class ChainBoardControl : Control
             var shadowPen = new Pen(_chainShadow, thickness + 4, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round);
             var segmentPen = new Pen(baseColor, thickness, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round);
             var edgePen = new Pen(_chainEdgeBrush, 2, lineCap: PenLineCap.Round);
+
+            if (celebrationGlowPen is not null)
+            {
+                context.DrawLine(celebrationGlowPen, start, end);
+            }
 
             context.DrawLine(shadowPen, start, end);
             context.DrawLine(segmentPen, start, end);
@@ -343,6 +366,71 @@ public sealed class ChainBoardControl : Control
                 isActive ? 7 : 6,
                 isActive ? 7 : 6);
         }
+    }
+
+    private void DrawCelebration(DrawingContext context)
+    {
+        if (_celebrationProgress <= 0d || _targetPoints.Count == 0)
+        {
+            return;
+        }
+
+        var center = GetTargetCentroid();
+        var baseRadius = Math.Min(Bounds.Width, Bounds.Height) * 0.1;
+        var ringProgress = EaseOut(_celebrationProgress);
+        var ringPen = new Pen(
+            new SolidColorBrush(Color.FromArgb(
+                (byte)(90 * (1d - _celebrationProgress)),
+                _accentColor.R,
+                _accentColor.G,
+                _accentColor.B)),
+            4);
+
+        context.DrawEllipse(
+            null,
+            ringPen,
+            center,
+            baseRadius + (ringProgress * 90),
+            (baseRadius * 0.72) + (ringProgress * 64));
+
+        var sparkleFill = new SolidColorBrush(Color.FromArgb(
+            (byte)(200 * (1d - (_celebrationProgress * 0.55))),
+            255,
+            251,
+            235));
+        var sparklePen = new Pen(
+            new SolidColorBrush(Color.FromArgb(
+                (byte)(150 * (1d - _celebrationProgress)),
+                _accentColor.R,
+                _accentColor.G,
+                _accentColor.B)),
+            2);
+
+        for (var index = 0; index < 10; index += 1)
+        {
+            var angle = (-Math.PI / 2d) + (index * Math.PI / 5d) + (_celebrationProgress * 0.35d);
+            var distance = baseRadius + 26 + (_celebrationProgress * (48 + (index % 3) * 12));
+            var sparkleCenter = new Point(
+                center.X + Math.Cos(angle) * distance,
+                center.Y + Math.Sin(angle) * distance * 0.82);
+            var radius = 4 + ((index % 3) * 1.5) + ((1d - _celebrationProgress) * 2.5);
+
+            context.DrawEllipse(sparkleFill, sparklePen, sparkleCenter, radius, radius);
+        }
+    }
+
+    private Point GetTargetCentroid()
+    {
+        var sumX = 0d;
+        var sumY = 0d;
+        foreach (var point in _targetPoints)
+        {
+            var screenPoint = WorldToScreen(point);
+            sumX += screenPoint.X;
+            sumY += screenPoint.Y;
+        }
+
+        return new Point(sumX / _targetPoints.Count, sumY / _targetPoints.Count);
     }
 
     private static StreamGeometry BuildHexTileGeometry(Point center, double radius)
@@ -408,5 +496,11 @@ public sealed class ChainBoardControl : Control
         return new Point(
             worldPoint.X + (worldPoint.Y * 0.5),
             worldPoint.Y * HexHeight);
+    }
+
+    private static double EaseOut(double t)
+    {
+        var clamped = Math.Clamp(t, 0d, 1d);
+        return 1d - Math.Pow(1d - clamped, 3d);
     }
 }

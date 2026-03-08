@@ -19,6 +19,8 @@ namespace ChainPuzzle.Desktop;
 /// </summary>
 public partial class MainWindow : Window
 {
+    private static readonly TimeSpan CelebrationDuration = TimeSpan.FromMilliseconds(1100);
+
     private sealed record RotationAnimation(
         ChainState FromState,
         ChainState ToState,
@@ -74,6 +76,7 @@ public partial class MainWindow : Window
 
     private RotationAnimation? _animation;
     private DragState? _dragState;
+    private TimeSpan? _celebrationStartedAt;
     private bool _isInitializing = true;
     private bool _isSyncingPicker;
     private bool _isSyncingSettings;
@@ -221,12 +224,13 @@ public partial class MainWindow : Window
             _vm.CurrentLevel.TargetPoints,
             _vm.SelectedJointIndex,
             _vm.AccentHex,
-            _vm.IsSolved && !_vm.IsBusy);
+            _vm.IsSolved && !_vm.IsBusy,
+            GetCelebrationProgress());
     }
 
     private void OnFrameTimerTick(object? sender, EventArgs e)
     {
-        if (_animation is null) { _frameTimer.Stop(); return; }
+        if (_animation is null && _celebrationStartedAt is null) { _frameTimer.Stop(); return; }
         RenderFrame();
     }
 
@@ -240,6 +244,7 @@ public partial class MainWindow : Window
         _vm.OnAnimationCompleted();
         if (solvedNow)
         {
+            StartCelebration();
             _audio.Play(AudioCue.ChapterSolved, _vm.SoundEnabled);
         }
     }
@@ -301,6 +306,36 @@ public partial class MainWindow : Window
         return true;
     }
 
+    private double GetCelebrationProgress()
+    {
+        if (_celebrationStartedAt is not { } startedAt)
+        {
+            return 0d;
+        }
+
+        var elapsed = _clock.Elapsed - startedAt;
+        if (elapsed >= CelebrationDuration)
+        {
+            _celebrationStartedAt = null;
+            return 0d;
+        }
+
+        return Math.Clamp(elapsed.TotalMilliseconds / CelebrationDuration.TotalMilliseconds, 0d, 1d);
+    }
+
+    private void StartCelebration()
+    {
+        _celebrationStartedAt = _clock.Elapsed;
+        EnsureFrameLoop();
+    }
+
+    private void ClearTransientVisualState()
+    {
+        _animation = null;
+        _dragState = null;
+        _celebrationStartedAt = null;
+    }
+
     private void EnsureFrameLoop()
     {
         if (!_frameTimer.IsEnabled) _frameTimer.Start();
@@ -321,27 +356,27 @@ public partial class MainWindow : Window
 
     private void PreviousButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        _animation = null; _dragState = null;
+        ClearTransientVisualState();
         _vm.PreviousLevelCommand.Execute(null);
     }
 
     private void NextButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        _animation = null; _dragState = null;
+        ClearTransientVisualState();
         _vm.NextLevelCommand.Execute(null);
     }
 
     private void UndoButton_OnClick(object? sender, RoutedEventArgs e)
     {
         if (_vm.IsBusy) return;
-        _animation = null; _dragState = null;
+        ClearTransientVisualState();
         _vm.UndoCommand.Execute(null);
     }
 
     private void RedoButton_OnClick(object? sender, RoutedEventArgs e)
     {
         if (_vm.IsBusy) return;
-        _animation = null; _dragState = null;
+        ClearTransientVisualState();
         _vm.RedoCommand.Execute(null);
     }
 
@@ -349,7 +384,7 @@ public partial class MainWindow : Window
 
     private void ResetButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        _animation = null; _dragState = null;
+        ClearTransientVisualState();
         _vm.ResetLevelCommand.Execute(null);
     }
 
@@ -387,7 +422,7 @@ public partial class MainWindow : Window
         }
 
         if (_isSyncingPicker || picker.SelectedIndex < 0 || picker.SelectedIndex == _vm.LevelIndex) return;
-        _animation = null; _dragState = null;
+        ClearTransientVisualState();
         _vm.SelectChapter(picker.SelectedIndex);
     }
 
