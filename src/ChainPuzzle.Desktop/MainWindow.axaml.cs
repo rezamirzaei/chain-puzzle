@@ -401,6 +401,7 @@ public partial class MainWindow : Window
             chainPoints,
             jointPoints,
             segmentSpans,
+            _vm.CurrentState.GetPoints(),
             _vm.CurrentLevel.TargetPoints,
             _vm.SelectedJointIndex,
             _vm.AccentHex,

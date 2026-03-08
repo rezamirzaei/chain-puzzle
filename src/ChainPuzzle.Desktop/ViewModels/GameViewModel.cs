@@ -694,12 +694,14 @@ public sealed partial class GameViewModel : ObservableObject
                     : $"No clear yet";
 
             var profile = level.TreeProfile;
+            var difficultyText = BuildDifficultyLabel(level);
+            var scoreText = BuildDifficultyScoreText(level);
             var pressureText = profile is null
                 ? $"Par {level.OptimalMoves}"
-                : $"{BuildDifficultyLabel(level)} • par {level.OptimalMoves} • traps {profile.StartTrapMoveCount}";
+                : $"{difficultyText} ({scoreText}) • par {level.OptimalMoves} • traps {profile.StartTrapMoveCount}";
             var branchText = profile is null
                 ? "No branch profile baked in"
-                : $"False lanes {profile.StartFalseProgressMoveCount} • decoys {profile.NearTargetDecoyCount} • shell-4 {profile.GoalShellCounts[^1]}";
+                : $"Method {BuildMethodHint(level)} • False lanes {profile.StartFalseProgressMoveCount} • decoys {profile.NearTargetDecoyCount} • shell-4 {profile.GoalShellCounts[^1]}";
 
             return new ChapterGalleryCard(
                 index,
@@ -834,6 +836,72 @@ public sealed partial class GameViewModel : ObservableObject
         return "Tactical";
     }
 
+    private static string BuildDifficultyScoreText(ChainLevel level)
+    {
+        var profile = level.TreeProfile;
+        if (profile is null)
+        {
+            return string.Empty;
+        }
+
+        var raw = ComputeDifficultyScore(level.OptimalMoves, profile);
+        return $"{raw}/100";
+    }
+
+    private static int ComputeDifficultyScore(int optimalMoves, LevelTreeProfile profile)
+    {
+        var legalMoves = Math.Max(profile.StartLegalMoveCount, 1);
+        var trapRatio = profile.StartTrapMoveCount / (double)legalMoves;
+        var falseRatio = profile.StartFalseProgressMoveCount / (double)legalMoves;
+
+        var shellPressure = profile.GoalShellCounts.Count >= 5
+            ? Math.Clamp(profile.GoalShellCounts[4], 1, 6_000)
+            : 3_000;
+        var shellScore = shellPressure >= 4_000
+            ? 8
+            : shellPressure >= 3_200
+                ? 16
+                : shellPressure >= 2_500
+                    ? 26
+                    : 36;
+
+        var decoyPressure = Math.Clamp((profile.NearTargetDecoyCount - 8) * 2, 0, 28);
+        var overlapPenalty = profile.StartOverlap >= 6 ? 0 : (6 - profile.StartOverlap) * 3;
+        var closerBonus = Math.Clamp(profile.StartCloserMoveCount * 4, 0, 14);
+
+        var score = 12
+                    + (optimalMoves * 7)
+                    + (int)Math.Round(trapRatio * 30)
+                    + (int)Math.Round(falseRatio * 24)
+                    + shellScore
+                    + decoyPressure
+                    + overlapPenalty
+                    + closerBonus;
+
+        return Math.Clamp(score, 0, 100);
+    }
+
+    private static string BuildMethodHint(ChainLevel level)
+    {
+        var profile = level.TreeProfile;
+        if (profile is null)
+        {
+            return "cover the silhouette directly";
+        }
+
+        var legalMoves = Math.Max(profile.StartLegalMoveCount, 1);
+        var falseLaneRatio = profile.StartFalseProgressMoveCount / (double)legalMoves;
+        var trapRatio = profile.StartTrapMoveCount / (double)legalMoves;
+
+        return falseLaneRatio >= 0.75
+            ? "Filter decoys first"
+            : trapRatio >= 0.7
+                ? "Keep escape routes open"
+                : profile.StartCloserMoveCount <= 3
+                    ? "Rebuild from the middle"
+                    : "Balance local and global fit";
+    }
+
     private static string BuildApproachText(ChainLevel level)
     {
         var profile = level.TreeProfile;
@@ -842,12 +910,16 @@ public sealed partial class GameViewModel : ObservableObject
             return "Cover the silhouette exactly.";
         }
 
-        return profile.StartCloserMoveCount switch
+        var methodHint = BuildMethodHint(level);
+
+        var routeHint = profile.StartCloserMoveCount switch
         {
-            <= 2 => $"Very few obvious improving moves exist. Expect a slow read. Why hard: {profile.StartTrapMoveCount} trap starts, {profile.StartFalseProgressMoveCount} false lanes, {profile.NearTargetDecoyCount} deep decoys.",
-            <= 4 => $"Several openings look locally correct. Preserve lanes for the late fit. Why hard: {profile.StartTrapMoveCount} trap starts, {profile.StartFalseProgressMoveCount} false lanes, {profile.NearTargetDecoyCount} deep decoys.",
-            _ => $"Many starts look playable. The finish order is the real constraint. Why hard: {profile.StartTrapMoveCount} trap starts, {profile.StartFalseProgressMoveCount} false lanes, {profile.NearTargetDecoyCount} deep decoys."
+            <= 2 => "Very few obvious improving moves exist. Expect a slow read.",
+            <= 4 => "Several openings look locally correct. Preserve lanes for the late fit.",
+            _ => "Many starts look playable. The finish order is the real constraint."
         };
+
+        return $"Method: {methodHint}. {routeHint} Why hard: {profile.StartTrapMoveCount} trap starts, {profile.StartFalseProgressMoveCount} false lanes, {profile.NearTargetDecoyCount} deep decoys.";
     }
 
     private static string FormatRotation(int rotation) => rotation < 0 ? "left" : "right";

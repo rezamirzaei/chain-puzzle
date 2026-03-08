@@ -258,6 +258,15 @@ public sealed class AdditionalCoreTests
         Assert.Throws<ArgumentException>(() => ChainState.FromPattern("   "));
     }
 
+    [Theory]
+    [InlineData("E0")]
+    [InlineData("E-2")]
+    [InlineData("Efoo")]
+    public void ChainState_FromPattern_RejectsInvalidLengths(string pattern)
+    {
+        Assert.Throws<ArgumentException>(() => ChainState.FromPattern(pattern));
+    }
+
     [Fact]
     public void ChainState_GetJointPoints_CorrectCount()
     {
@@ -487,5 +496,3 @@ public sealed class AdditionalCoreTests
         Assert.Equal(validation, updated.Validation);
     }
 }
-
-

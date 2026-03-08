@@ -78,13 +78,20 @@ public sealed class ChainState : IEquatable<ChainState>
             }
 
             var direction = DirectionExtensions.ParseToken(letterPart);
-            var length = 1;
-            if (!string.IsNullOrWhiteSpace(numberPart) && int.TryParse(numberPart, out var parsed))
+            if (string.IsNullOrWhiteSpace(numberPart))
             {
-                length = parsed;
+                segments.Add(new ChainSegment(direction, 1));
+                continue;
             }
 
-            segments.Add(new ChainSegment(direction, length));
+            if (!int.TryParse(numberPart, out var parsed) || parsed < 1)
+            {
+                throw new ArgumentException(
+                    $"Invalid link count '{numberPart}' in token: {token}",
+                    nameof(pattern));
+            }
+
+            segments.Add(new ChainSegment(direction, parsed));
         }
 
         return new ChainState(segments);
