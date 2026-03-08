@@ -1,107 +1,106 @@
-# Chain Chapters (.NET Desktop)
+# Chain Chapters
 
-[![CI](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
+Chain Chapters is a .NET 10 desktop puzzle game built with Avalonia.
+The player rotates joints in a segmented chain until the chain fully covers a
+target silhouette on a hex grid. Each shipped chapter uses the same chain
+length, has exactly one full-cover solution, and starts from a sparse,
+non-solved state.
 
-Chain Chapters is a C# desktop chain-puzzle game with chapter progression.
-Each chapter uses the same chain length, starts from a deceptive scrambled
-state, and asks the player to rotate joints until the chain fully covers the
-target silhouette.
+## What Is In The Game
 
-## Current Features
+- 10 handcrafted chapters with solid, hole-free target silhouettes
+- exact per-chapter par counts
+- chapter gallery with silhouette previews and medal tracking
+- drag controls, keyboard controls, undo/redo, and text-only or highlighted nudges
+- local save data for exact in-progress boards, chapter progress, and best runs
+- local settings for animation speed, hint highlighting, and feedback beeps
 
-- 10 handcrafted chapters with distinct filled target shapes, unique full-cover solutions, and deceptive six-move starts.
-- Smooth drag and keyboard rotation controls.
-- Undo and redo support.
-- Chapter picker with completion tracking.
-- Real per-chapter par counts baked into the shipped level data.
-- Personal best move counts saved locally between sessions.
-- Start/menu overlay with continue and clean new-run flow.
-- Filled board rendering for target shapes instead of peg-only outlines.
-- Reverse-shell tuning so most starts already look close to solved but still branch into many wrong continuations.
-- MVVM architecture with `GameViewModel` managing all game state.
-- Settings persistence (animation speed, sound, hint highlights).
-- Comprehensive XML documentation on all public Core APIs.
+## Runtime Architecture
 
-## Architecture
+The solution is split into a small number of focused layers:
 
-```
-┌──────────────────┐     ┌─────────────────────────────┐
-│ ChainPuzzle.Core │◄────│   ChainPuzzle.Desktop       │
-│   (model/solver) │     │  ┌─────────────────────┐    │
-│                  │     │  │   GameViewModel      │    │
-│  ChainState      │     │  │   (MVVM commands)    │    │
-│  ChainSolver     │     │  └──────────┬──────────┘    │
-│  ChapterGame     │     │  ┌──────────▼──────────┐    │
-│  ChapterFactory  │     │  │   MainWindow         │    │
-│  TargetCoverCtr  │     │  │   (render/input)     │    │
-│  LevelValidator  │     │  └──────────┬──────────┘    │
-│  LevelAnalyzer   │     │  ┌──────────▼──────────┐    │
-│                  │     │  │ ChainBoardControl    │    │
-└──────────────────┘     │  │ (hex-grid drawing)   │    │
-                         │  └─────────────────────┘    │
-┌──────────────────┐     └─────────────────────────────┘
-│ ChainPuzzle.Tests│
-│  (xUnit, 40+     │
-│   structural      │
-│   tests)          │
-└──────────────────┘
-```
+- `src/ChainPuzzle.Core`
+  - pure puzzle logic
+  - chain geometry, move rules, solver, target-cover counting, chapter data, and validation
+- `src/ChainPuzzle.Desktop`
+  - desktop shell
+  - `MainWindow` handles rendering, input, and animation timing
+  - `GameViewModel` owns user-facing state, progress, medals, and settings
+  - `ChainBoardControl` renders the board and live chain
+  - `ShapePreviewControl` renders chapter silhouettes in the gallery
+- `tests/ChainPuzzle.Tests`
+  - gameplay, geometry, solver, desktop-state, and chapter-structure tests
+
+More detail is in [docs/development.md](docs/development.md).
 
 ## Solution Layout
 
-- `src/ChainPuzzle.Core` — puzzle model, solver, chapter generation, validation, XML-documented API.
-- `src/ChainPuzzle.Desktop` — Avalonia desktop UI with MVVM architecture and smooth rotation animation.
-- `tests/ChainPuzzle.Tests` — xUnit tests for solver, chapter validity, game state, edge cases, and structural invariants.
-- `.github/workflows/ci.yml` — GitHub Actions CI pipeline (build, test, coverage).
+- `Solution2.sln` — root solution file
+- `global.json` — pinned .NET SDK for reproducible local and CI builds
+- `Directory.Build.props` — shared language/analyzer settings
+- `.editorconfig` — formatting and style defaults
+- `.github/workflows/ci.yml` — build-and-test workflow for push and pull request validation
 
-## Run Desktop App
+## Run The Desktop App
 
 ```bash
 dotnet run --project src/ChainPuzzle.Desktop/ChainPuzzle.Desktop.csproj
 ```
 
-You can also open `Solution2.sln` in Rider/Visual Studio and run `ChainPuzzle.Desktop`.
-
 ## Controls
 
-- **Mouse**: click a joint and drag to rotate.
-- **Keyboard**: `Up`/`Down` selects a joint, `A`/`D` rotates.
-- **History**: `Ctrl+Z` undoes, `Ctrl+Y` or `Ctrl+Shift+Z` redoes.
-- **Nudge**: the in-game `Nudge` button highlights a recommended joint and direction without playing the move.
-- **UI**: use the chapter picker to jump between chapters.
-- **Menu**: `Esc` opens/closes the pause menu. `N` starts a new run from the menu.
+- Mouse: click a joint and drag to rotate
+- Keyboard: `Up` / `Down` selects a joint, `A` / `D` rotates
+- Undo/redo: `Ctrl+Z`, `Ctrl+Y`, or `Ctrl+Shift+Z`
+- Menu: `Esc`
+- New run from menu: `N`
 
-## Settings
+## Save Data
 
-Settings are persisted in `~/.local/share/ChainPuzzle/settings.json` (or equivalent) and include:
-- **Animation speed** (slow / normal / fast)
-- **Sound enabled** toggle
-- **Hint highlights** toggle
+The desktop app stores local data under the user application data folder in a
+`ChainPuzzle` directory:
 
-## Run Tests
+- `progress.json` — current chapter, cleared chapters, and best runs
+- `progress.json` also stores the current board state and move count, so `Continue` restores the exact puzzle you left
+- `settings.json` — animation speed, nudge highlight preference, and feedback beep setting
+
+## Testing
+
+Run the full suite:
 
 ```bash
 dotnet test Solution2.sln
 ```
 
+The automated suite covers:
+
+- geometry and direction primitives
+- chain mutation and collision rules
+- solver correctness
+- chapter validity
+- target-shape structural constraints
+- progression state behavior
+- desktop persistence and settings behavior
+
+Development-only generator/diagnostic files are intentionally excluded from the
+normal test project build so CI and local validation stay deterministic.
+
 ## CI
 
-The project uses GitHub Actions for continuous integration. The pipeline:
-1. Restores dependencies
-2. Builds in Release mode
-3. Runs all tests with code coverage collection
-4. Uploads coverage artifacts
+GitHub Actions runs:
 
-## Hex Coordinate System
+- restore
+- release build
+- release test run
 
-The game uses **axial hex coordinates** (pointy-top orientation):
+on both `ubuntu-latest` and `windows-latest`.
 
-- Each cell is identified by an `IntPoint(q, r)` where `q` = column, `r` = row.
-- The six directions map to: E `(+1,0)`, NE `(+1,−1)`, NW `(0,−1)`, W `(−1,0)`, SW `(−1,+1)`, SE `(0,+1)`.
-- Screen projection: `screenX = q + r * 0.5`, `screenY = r * √3/2`.
-- The chain starts at the origin `(0,0)` and extends segment-by-segment along these directions.
+## Project Quality Defaults
 
-## Code Style
-
-The repository includes an `.editorconfig` with standard C# style rules and a `Directory.Build.props` with shared nullable, implicit usings, and analysis-level settings applied to all projects.
-
+- nullable reference types enabled
+- implicit usings enabled
+- latest recommended analyzer level enabled
+- warnings treated as errors
+- deterministic builds enabled
+- repo-wide formatting via `.editorconfig`
+- generated output ignored via `.gitignore`

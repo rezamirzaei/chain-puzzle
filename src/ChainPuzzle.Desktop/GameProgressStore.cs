@@ -7,17 +7,25 @@ internal sealed record GameProgressDocument(
     int Version,
     int CurrentLevelIndex,
     string[] CompletedLevelIds,
-    Dictionary<string, int> BestMovesByLevelId)
+    Dictionary<string, int> BestMovesByLevelId,
+    string? CurrentStatePattern,
+    int CurrentMoves)
 {
     /// <summary>An empty document with default values.</summary>
     public static GameProgressDocument Empty { get; } =
-        new(GameProgressStore.CurrentVersion, 0, Array.Empty<string>(), new Dictionary<string, int>());
+        new(GameProgressStore.CurrentVersion, 0, Array.Empty<string>(), new Dictionary<string, int>(), null, 0);
 }
 
-/// <summary>Reads and writes game progress (current chapter, completed chapters, best moves) to a local JSON file.</summary>
-internal sealed class GameProgressStore
+/// <summary>Reads and writes game progress (chapter index, board state, clears, best moves) to a local JSON file.</summary>
+internal sealed class GameProgressStore : IGameProgressStore
 {
-    public const int CurrentVersion = 3;
+    private sealed record LegacyGameProgressDocumentV3(
+        int Version,
+        int CurrentLevelIndex,
+        string[] CompletedLevelIds,
+        Dictionary<string, int> BestMovesByLevelId);
+
+    public const int CurrentVersion = 4;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -26,12 +34,9 @@ internal sealed class GameProgressStore
 
     private readonly string _filePath;
 
-    public GameProgressStore()
+    public GameProgressStore(string? rootDirectory = null)
     {
-        var root = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "ChainPuzzle");
-        _filePath = Path.Combine(root, "progress.json");
+        _filePath = StoragePaths.Resolve("progress.json", rootDirectory);
     }
 
     public GameProgressDocument Load()
@@ -43,11 +48,25 @@ internal sealed class GameProgressStore
                 return GameProgressDocument.Empty;
             }
 
-            using var stream = File.OpenRead(_filePath);
-            var document = JsonSerializer.Deserialize<GameProgressDocument>(stream, JsonOptions);
-            return document is not null && document.Version == CurrentVersion
-                ? document
-                : GameProgressDocument.Empty;
+            var json = File.ReadAllText(_filePath);
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                return GameProgressDocument.Empty;
+            }
+
+            using var document = JsonDocument.Parse(json);
+            if (!document.RootElement.TryGetProperty(nameof(GameProgressDocument.Version), out var versionElement)
+                || versionElement.ValueKind != JsonValueKind.Number)
+            {
+                return GameProgressDocument.Empty;
+            }
+
+            return versionElement.GetInt32() switch
+            {
+                CurrentVersion => Normalize(JsonSerializer.Deserialize<GameProgressDocument>(json, JsonOptions)),
+                3 => MigrateFromV3(JsonSerializer.Deserialize<LegacyGameProgressDocumentV3>(json, JsonOptions)),
+                _ => GameProgressDocument.Empty
+            };
         }
         catch
         {
@@ -59,18 +78,47 @@ internal sealed class GameProgressStore
     {
         try
         {
-            var directory = Path.GetDirectoryName(_filePath);
-            if (!string.IsNullOrWhiteSpace(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-
-            using var stream = File.Create(_filePath);
-            JsonSerializer.Serialize(stream, document, JsonOptions);
+            JsonFileStore.SaveAtomic(_filePath, Normalize(document), JsonOptions);
         }
         catch
         {
             // Saving progress should never break the game loop.
         }
+    }
+
+    private static GameProgressDocument MigrateFromV3(LegacyGameProgressDocumentV3? legacy)
+    {
+        if (legacy is null)
+        {
+            return GameProgressDocument.Empty;
+        }
+
+        return new GameProgressDocument(
+            CurrentVersion,
+            Math.Max(0, legacy.CurrentLevelIndex),
+            legacy.CompletedLevelIds ?? Array.Empty<string>(),
+            legacy.BestMovesByLevelId is null
+                ? new Dictionary<string, int>()
+                : new Dictionary<string, int>(legacy.BestMovesByLevelId, StringComparer.Ordinal),
+            null,
+            0);
+    }
+
+    private static GameProgressDocument Normalize(GameProgressDocument? document)
+    {
+        if (document is null)
+        {
+            return GameProgressDocument.Empty;
+        }
+
+        return new GameProgressDocument(
+            CurrentVersion,
+            Math.Max(0, document.CurrentLevelIndex),
+            document.CompletedLevelIds ?? Array.Empty<string>(),
+            document.BestMovesByLevelId is null
+                ? new Dictionary<string, int>()
+                : new Dictionary<string, int>(document.BestMovesByLevelId, StringComparer.Ordinal),
+            string.IsNullOrWhiteSpace(document.CurrentStatePattern) ? null : document.CurrentStatePattern,
+            Math.Max(0, document.CurrentMoves));
     }
 }

@@ -13,9 +13,10 @@ namespace ChainPuzzle.Desktop.ViewModels;
 public sealed partial class GameViewModel : ObservableObject
 {
     private readonly ChapterGame _game;
-    private readonly GameProgressStore _progressStore = new();
-    private readonly SettingsStore _settingsStore = new();
+    private readonly IGameProgressStore _progressStore;
+    private readonly ISettingsStore _settingsStore;
     private readonly Dictionary<string, int> _bestMovesByLevelId = new(StringComparer.Ordinal);
+    private bool _isLoadingSettings;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanInteract))]
@@ -50,9 +51,18 @@ public sealed partial class GameViewModel : ObservableObject
     [ObservableProperty]
     private bool _showHintHighlights = true;
 
-    public GameViewModel()
+    public GameViewModel() : this(
+        new ChapterGame(ChapterFactory.CreateChapters()),
+        new GameProgressStore(),
+        new SettingsStore())
     {
-        _game = new ChapterGame(ChapterFactory.CreateChapters());
+    }
+
+    internal GameViewModel(ChapterGame game, IGameProgressStore progressStore, ISettingsStore settingsStore)
+    {
+        _game = game ?? throw new ArgumentNullException(nameof(game));
+        _progressStore = progressStore ?? throw new ArgumentNullException(nameof(progressStore));
+        _settingsStore = settingsStore ?? throw new ArgumentNullException(nameof(settingsStore));
         LoadProgress();
         LoadSettings();
         ShowHome(allowClose: false);
@@ -118,6 +128,11 @@ public sealed partial class GameViewModel : ObservableObject
 
     private bool _hasSavedProgress;
 
+    private bool HasSavedRunData => LevelIndex != 0
+        || Moves > 0
+        || _game.CompletedLevelIds.Count > 0
+        || _bestMovesByLevelId.Count > 0;
+
     /// <summary>Animation duration in milliseconds, based on the current speed setting.</summary>
     public int AnimationDurationMs => AnimationSpeed switch
     {
@@ -134,8 +149,6 @@ public sealed partial class GameViewModel : ObservableObject
     public bool TryRotate(int jointIndex, int rotation)
     {
         if (IsBusy || IsSolved) return false;
-
-        var fromState = _game.CurrentState;
         if (!_game.TryRotate(jointIndex, rotation, out _))
         {
             StatusMessage = "Move blocked by chain collision.";
@@ -144,6 +157,7 @@ public sealed partial class GameViewModel : ObservableObject
         }
 
         StatusMessage = $"Moved joint {jointIndex}.";
+        SaveProgress();
         RefreshAll();
         return true;
     }
@@ -190,6 +204,7 @@ public sealed partial class GameViewModel : ObservableObject
     {
         if (IsBusy || !_game.TryUndo()) return;
         StatusMessage = "Undid the last move.";
+        SaveProgress();
         RefreshAll();
     }
 
@@ -199,6 +214,7 @@ public sealed partial class GameViewModel : ObservableObject
         if (IsBusy || !_game.TryRedo()) return;
         if (IsSolved) FinalizeSolvedState();
         else StatusMessage = "Replayed the move.";
+        SaveProgress();
         RefreshAll();
     }
 
@@ -208,6 +224,7 @@ public sealed partial class GameViewModel : ObservableObject
         _game.ResetLevel();
         SelectedJointIndex = null;
         StatusMessage = "Chapter reset.";
+        SaveProgress();
         RefreshAll();
     }
 
@@ -236,7 +253,10 @@ public sealed partial class GameViewModel : ObservableObject
         }
         else
         {
-            SelectedJointIndex = hint.Value.JointIndex;
+            if (ShowHintHighlights)
+            {
+                SelectedJointIndex = hint.Value.JointIndex;
+            }
             StatusMessage = $"Nudge: try joint {hint.Value.JointIndex}, rotate {FormatRotation(hint.Value.Rotation)}.";
         }
 
@@ -344,6 +364,27 @@ public sealed partial class GameViewModel : ObservableObject
         return true;
     }
 
+    private bool TryRestoreSavedState(GameProgressDocument document)
+    {
+        _game.SetLevel(document.CurrentLevelIndex);
+
+        if (string.IsNullOrWhiteSpace(document.CurrentStatePattern))
+        {
+            return false;
+        }
+
+        try
+        {
+            var savedState = ChainState.FromPattern(document.CurrentStatePattern);
+            return _game.TryRestoreLevelState(document.CurrentLevelIndex, savedState, document.CurrentMoves);
+        }
+        catch
+        {
+            _game.ResetLevel();
+            return false;
+        }
+    }
+
     private void LoadProgress()
     {
         var doc = _progressStore.Load();
@@ -352,22 +393,93 @@ public sealed partial class GameViewModel : ObservableObject
             if (knownIds.Contains(id)) _game.CompletedLevelIds.Add(id);
         foreach (var entry in doc.BestMovesByLevelId)
             if (knownIds.Contains(entry.Key) && entry.Value > 0) _bestMovesByLevelId[entry.Key] = entry.Value;
-        if (doc.CurrentLevelIndex != 0 || _game.CompletedLevelIds.Count > 0 || _bestMovesByLevelId.Count > 0)
-        {
-            _game.SetLevel(doc.CurrentLevelIndex);
-            StatusMessage = "Progress restored.";
-        }
-        _hasSavedProgress = doc.CurrentLevelIndex != 0
+
+        var shouldRestoreSession = doc.CurrentLevelIndex != 0
             || _game.CompletedLevelIds.Count > 0
-            || _bestMovesByLevelId.Count > 0;
+            || _bestMovesByLevelId.Count > 0
+            || doc.CurrentMoves > 0
+            || !string.IsNullOrWhiteSpace(doc.CurrentStatePattern);
+
+        if (shouldRestoreSession)
+        {
+            var restoredState = TryRestoreSavedState(doc);
+            StatusMessage = restoredState
+                ? $"Run restored on {CurrentLevel.Subtitle}."
+                : "Progress restored.";
+        }
+
+        var persistedSolvedState = false;
+        if (_game.IsSolved)
+        {
+            persistedSolvedState |= _game.CompletedLevelIds.Add(CurrentLevel.Id);
+            persistedSolvedState |= RecordBestRun();
+            if (persistedSolvedState)
+            {
+                SaveProgress();
+            }
+        }
+
+        _hasSavedProgress = HasSavedRunData;
     }
 
     private void LoadSettings()
     {
-        var doc = _settingsStore.Load();
-        SoundEnabled = doc.SoundEnabled;
-        AnimationSpeed = doc.AnimationSpeed;
-        ShowHintHighlights = doc.ShowHintHighlights;
+        _isLoadingSettings = true;
+
+        try
+        {
+            var doc = _settingsStore.Load();
+            SoundEnabled = doc.SoundEnabled;
+            AnimationSpeed = doc.AnimationSpeed;
+            ShowHintHighlights = doc.ShowHintHighlights;
+        }
+        finally
+        {
+            _isLoadingSettings = false;
+        }
+    }
+
+    partial void OnSoundEnabledChanged(bool value)
+    {
+        if (_isLoadingSettings)
+        {
+            return;
+        }
+
+        SaveSettings();
+    }
+
+    partial void OnAnimationSpeedChanged(int value)
+    {
+        var clamped = Math.Clamp(value, 0, 2);
+        if (clamped != value)
+        {
+            AnimationSpeed = clamped;
+            return;
+        }
+
+        if (_isLoadingSettings)
+        {
+            return;
+        }
+
+        SaveSettings();
+    }
+
+    partial void OnShowHintHighlightsChanged(bool value)
+    {
+        if (!value && SelectedJointIndex is not null)
+        {
+            SelectedJointIndex = null;
+        }
+
+        if (_isLoadingSettings)
+        {
+            return;
+        }
+
+        SaveSettings();
+        RefreshAll();
     }
 
     private void SaveProgress()
@@ -376,8 +488,10 @@ public sealed partial class GameViewModel : ObservableObject
             GameProgressStore.CurrentVersion,
             LevelIndex,
             _game.CompletedLevelIds.OrderBy(id => id, StringComparer.Ordinal).ToArray(),
-            new Dictionary<string, int>(_bestMovesByLevelId, StringComparer.Ordinal)));
-        _hasSavedProgress = LevelIndex != 0 || _game.CompletedLevelIds.Count > 0 || _bestMovesByLevelId.Count > 0;
+            new Dictionary<string, int>(_bestMovesByLevelId, StringComparer.Ordinal),
+            CurrentState.SerializeSegments(),
+            Moves));
+        _hasSavedProgress = HasSavedRunData;
     }
 
     /// <summary>Refreshes all derived HUD properties.</summary>
@@ -431,8 +545,7 @@ public sealed partial class GameViewModel : ObservableObject
     {
         if (!IsHomeVisible) return;
 
-        var hasRun = _hasSavedProgress || LevelIndex > 0
-            || _game.CompletedLevelIds.Count > 0 || _bestMovesByLevelId.Count > 0;
+        var hasRun = _hasSavedProgress || HasSavedRunData;
         var current = $"{LevelIndex + 1}/{Levels.Count}: {Subtitle}";
 
         HomeTitle = HomeAllowsClose ? "Pause Menu"
@@ -539,6 +652,3 @@ public sealed partial class GameViewModel : ObservableObject
 
     private static string FormatRotation(int rotation) => rotation < 0 ? "left" : "right";
 }
-
-
-

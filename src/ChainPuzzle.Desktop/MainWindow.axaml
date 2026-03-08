@@ -120,6 +120,54 @@
                         Content="Close Menu"
                         Click="HomeCloseButton_OnClick" />
               </Grid>
+
+              <Border Margin="0,14,0,0"
+                      CornerRadius="12"
+                      Background="#F8FAFC"
+                      BorderBrush="#D1D5DB"
+                      BorderThickness="1"
+                      Padding="12">
+                <Grid ColumnDefinitions="220,*,*"
+                      ColumnSpacing="16">
+                  <StackPanel Grid.Column="0">
+                    <TextBlock Text="Animation Speed"
+                               FontSize="11"
+                               Foreground="#64748B" />
+                    <ComboBox x:Name="AnimationSpeedPicker"
+                              Margin="0,6,0,0"
+                              SelectedIndex="1"
+                              SelectionChanged="AnimationSpeedPicker_OnSelectionChanged">
+                      <ComboBoxItem Content="Slow" />
+                      <ComboBoxItem Content="Normal" />
+                      <ComboBoxItem Content="Fast" />
+                    </ComboBox>
+                  </StackPanel>
+
+                  <StackPanel Grid.Column="1"
+                              VerticalAlignment="Center">
+                    <CheckBox x:Name="HintHighlightsCheckBox"
+                              Content="Highlight suggested joint on nudge"
+                              Checked="SettingsCheckBox_OnChanged"
+                              Unchecked="SettingsCheckBox_OnChanged" />
+                    <TextBlock Margin="0,6,0,0"
+                               FontSize="12"
+                               Foreground="#64748B"
+                               Text="Turn this off if you want the hint button to stay text-only." />
+                  </StackPanel>
+
+                  <StackPanel Grid.Column="2"
+                              VerticalAlignment="Center">
+                    <CheckBox x:Name="SoundEnabledCheckBox"
+                              Content="Enable feedback beeps"
+                              Checked="SettingsCheckBox_OnChanged"
+                              Unchecked="SettingsCheckBox_OnChanged" />
+                    <TextBlock Margin="0,6,0,0"
+                               FontSize="12"
+                               Foreground="#64748B"
+                               Text="Uses lightweight system beeps for blocked moves and solves when supported." />
+                  </StackPanel>
+                </Grid>
+              </Border>
             </StackPanel>
 
             <Border Grid.Row="3"

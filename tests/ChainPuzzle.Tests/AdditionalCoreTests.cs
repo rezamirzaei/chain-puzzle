@@ -155,6 +155,23 @@ public sealed class AdditionalCoreTests
     }
 
     [Fact]
+    public void ChainState_SerializeSegments_RoundTripsThroughPatternParser()
+    {
+        var original = new ChainState(new[]
+        {
+            new ChainSegment(Direction.East, 2),
+            new ChainSegment(Direction.NorthEast, 1),
+            new ChainSegment(Direction.NorthWest, 3),
+            new ChainSegment(Direction.SouthEast, 1),
+            new ChainSegment(Direction.SouthWest, 2)
+        });
+
+        var restored = ChainState.FromPattern(original.SerializeSegments());
+
+        Assert.Equal(original.SerializeSegments(), restored.SerializeSegments());
+    }
+
+    [Fact]
     public void ChainState_RotateFromJoint_OutOfRangeReturnsNull()
     {
         var state = new ChainState(new[]
@@ -470,6 +487,5 @@ public sealed class AdditionalCoreTests
         Assert.Equal(validation, updated.Validation);
     }
 }
-
 
 

@@ -14,7 +14,7 @@ internal sealed record SettingsDocument(
 }
 
 /// <summary>Reads and writes user settings to a local JSON file.</summary>
-internal sealed class SettingsStore
+internal sealed class SettingsStore : ISettingsStore
 {
     public const int CurrentVersion = 1;
 
@@ -25,12 +25,9 @@ internal sealed class SettingsStore
 
     private readonly string _filePath;
 
-    public SettingsStore()
+    public SettingsStore(string? rootDirectory = null)
     {
-        var root = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "ChainPuzzle");
-        _filePath = Path.Combine(root, "settings.json");
+        _filePath = StoragePaths.Resolve("settings.json", rootDirectory);
     }
 
     public SettingsDocument Load()
@@ -45,7 +42,7 @@ internal sealed class SettingsStore
             using var stream = File.OpenRead(_filePath);
             var document = JsonSerializer.Deserialize<SettingsDocument>(stream, JsonOptions);
             return document is not null && document.Version == CurrentVersion
-                ? document
+                ? Normalize(document)
                 : SettingsDocument.Default;
         }
         catch
@@ -58,19 +55,25 @@ internal sealed class SettingsStore
     {
         try
         {
-            var directory = Path.GetDirectoryName(_filePath);
-            if (!string.IsNullOrWhiteSpace(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-
-            using var stream = File.Create(_filePath);
-            JsonSerializer.Serialize(stream, document, JsonOptions);
+            JsonFileStore.SaveAtomic(_filePath, Normalize(document), JsonOptions);
         }
         catch
         {
             // Saving settings should never break the game loop.
         }
     }
-}
 
+    private static SettingsDocument Normalize(SettingsDocument? document)
+    {
+        if (document is null)
+        {
+            return SettingsDocument.Default;
+        }
+
+        return new SettingsDocument(
+            CurrentVersion,
+            document.SoundEnabled,
+            Math.Clamp(document.AnimationSpeed, 0, 2),
+            document.ShowHintHighlights);
+    }
+}

@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\ChainPuzzle.Core\ChainPuzzle.Core.csproj" />
+    <ProjectReference Include="..\..\src\ChainPuzzle.Desktop\ChainPuzzle.Desktop.csproj" />
   </ItemGroup>
 
   <ItemGroup>

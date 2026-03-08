@@ -9,6 +9,7 @@ using ChainPuzzle.Core;
 using ChainPuzzle.Desktop.Controls;
 using ChainPuzzle.Desktop.ViewModels;
 using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace ChainPuzzle.Desktop;
 
@@ -42,6 +43,9 @@ public partial class MainWindow : Window
     private readonly TextBlock _homeProgressText;
     private readonly TextBlock _homeBestText;
     private readonly TextBlock _homeMedalText;
+    private readonly ComboBox _animationSpeedPicker;
+    private readonly CheckBox _hintHighlightsCheckBox;
+    private readonly CheckBox _soundEnabledCheckBox;
     private readonly TextBlock _titleText;
     private readonly TextBlock _subtitleText;
     private readonly TextBlock _descriptionText;
@@ -71,6 +75,7 @@ public partial class MainWindow : Window
     private RotationAnimation? _animation;
     private DragState? _dragState;
     private bool _isSyncingPicker;
+    private bool _isSyncingSettings;
 
     public MainWindow()
     {
@@ -85,6 +90,9 @@ public partial class MainWindow : Window
         _homeProgressText = GetRequiredControl<TextBlock>("HomeProgressText");
         _homeBestText = GetRequiredControl<TextBlock>("HomeBestText");
         _homeMedalText = GetRequiredControl<TextBlock>("HomeMedalText");
+        _animationSpeedPicker = GetRequiredControl<ComboBox>("AnimationSpeedPicker");
+        _hintHighlightsCheckBox = GetRequiredControl<CheckBox>("HintHighlightsCheckBox");
+        _soundEnabledCheckBox = GetRequiredControl<CheckBox>("SoundEnabledCheckBox");
         _titleText = GetRequiredControl<TextBlock>("TitleText");
         _subtitleText = GetRequiredControl<TextBlock>("SubtitleText");
         _descriptionText = GetRequiredControl<TextBlock>("DescriptionText");
@@ -154,6 +162,12 @@ public partial class MainWindow : Window
         _homeSecondaryButton.IsVisible = _vm.HomeSecondaryVisible;
         _homeCloseButton.IsVisible = _vm.HomeAllowsClose;
 
+        _isSyncingSettings = true;
+        _animationSpeedPicker.SelectedIndex = Math.Clamp(_vm.AnimationSpeed, 0, 2);
+        _hintHighlightsCheckBox.IsChecked = _vm.ShowHintHighlights;
+        _soundEnabledCheckBox.IsChecked = _vm.SoundEnabled;
+        _isSyncingSettings = false;
+
         _solvedCard.IsVisible = _vm.ShowSolvedCard;
         _solvedTitleText.Text = _vm.SolvedTitle;
         _solvedSummaryText.Text = _vm.SolvedSummary;
@@ -220,7 +234,13 @@ public partial class MainWindow : Window
         var elapsed = _clock.Elapsed - _animation.StartedAt;
         if (elapsed < _animation.Duration) return;
         _animation = null;
+        var solvedNow = _vm.IsSolved;
         _vm.OnAnimationCompleted();
+        if (solvedNow)
+        {
+            PlayFeedbackTone(880, 90);
+            PlayFeedbackTone(1175, 120);
+        }
     }
 
     private IReadOnlyList<Point> GetDisplayPoints()
@@ -266,7 +286,11 @@ public partial class MainWindow : Window
         if (_vm.IsBusy || _vm.IsSolved) return false;
 
         var fromState = _vm.CurrentState;
-        if (!_vm.TryRotate(jointIndex, rotation)) return false;
+        if (!_vm.TryRotate(jointIndex, rotation))
+        {
+            PlayFeedbackTone(220, 70);
+            return false;
+        }
 
         _vm.IsAnimating = true;
         _animation = new RotationAnimation(
@@ -359,6 +383,27 @@ public partial class MainWindow : Window
         if (_isSyncingPicker || _chapterPicker.SelectedIndex < 0 || _chapterPicker.SelectedIndex == _vm.LevelIndex) return;
         _animation = null; _dragState = null;
         _vm.SelectChapter(_chapterPicker.SelectedIndex);
+    }
+
+    private void AnimationSpeedPicker_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_isSyncingSettings || _animationSpeedPicker.SelectedIndex < 0)
+        {
+            return;
+        }
+
+        _vm.AnimationSpeed = Math.Clamp(_animationSpeedPicker.SelectedIndex, 0, 2);
+    }
+
+    private void SettingsCheckBox_OnChanged(object? sender, RoutedEventArgs e)
+    {
+        if (_isSyncingSettings)
+        {
+            return;
+        }
+
+        _vm.ShowHintHighlights = _hintHighlightsCheckBox.IsChecked ?? true;
+        _vm.SoundEnabled = _soundEnabledCheckBox.IsChecked ?? false;
     }
 
     // =====================
@@ -475,4 +520,27 @@ public partial class MainWindow : Window
 
     private static Color ParseColor(string hex, Color fallback) =>
         Color.TryParse(hex, out var c) ? c : fallback;
+
+    private void PlayFeedbackTone(int frequency, int durationMs)
+    {
+        if (!_vm.SoundEnabled)
+        {
+            return;
+        }
+
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                if (OperatingSystem.IsWindows())
+                {
+                    Console.Beep(frequency, durationMs);
+                }
+            }
+            catch
+            {
+                // System beeps are optional polish, never required for gameplay.
+            }
+        });
+    }
 }

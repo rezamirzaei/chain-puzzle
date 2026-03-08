@@ -69,6 +69,34 @@ public sealed class ChapterGame
         _redoHistory.Clear();
     }
 
+    public bool TryRestoreLevelState(int levelIndex, ChainState state, int moves)
+    {
+        if (state is null)
+        {
+            throw new ArgumentNullException(nameof(state));
+        }
+
+        LevelIndex = Math.Clamp(levelIndex, 0, Levels.Count - 1);
+        _undoHistory.Clear();
+        _redoHistory.Clear();
+
+        if (moves < 0 || !IsCompatibleState(state))
+        {
+            ResetLevel();
+            return false;
+        }
+
+        CurrentState = state.Clone();
+        Moves = moves;
+
+        if (IsSolved)
+        {
+            CompletedLevelIds.Add(CurrentLevel.Id);
+        }
+
+        return true;
+    }
+
     public bool TryRotate(int jointIndex, int rotation, out ChainState nextState)
     {
         nextState = CurrentState;
@@ -161,5 +189,24 @@ public sealed class ChapterGame
         var solver = new ChainSolver(segmentCount);
         _solvers[segmentCount] = solver;
         return solver;
+    }
+
+    private bool IsCompatibleState(ChainState state)
+    {
+        if (!state.IsSelfAvoiding() || state.SegmentCount != CurrentLevel.SegmentCount)
+        {
+            return false;
+        }
+
+        var expectedSegments = CurrentLevel.GoalState.Segments;
+        for (var index = 0; index < expectedSegments.Count; index += 1)
+        {
+            if (state.Segments[index].Length != expectedSegments[index].Length)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

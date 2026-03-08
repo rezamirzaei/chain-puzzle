@@ -56,6 +56,10 @@ public static class DirectionExtensions
         {
             'E' => Direction.East,
             'W' => Direction.West,
+            'A' => Direction.NorthEast,
+            'B' => Direction.NorthWest,
+            'C' => Direction.SouthEast,
+            'D' => Direction.SouthWest,
             _ => throw new ArgumentException($"Invalid direction letter: {letter}", nameof(letter))
         };
     }
@@ -76,6 +80,10 @@ public static class DirectionExtensions
             "NW" => Direction.NorthWest,
             "SE" => Direction.SouthEast,
             "SW" => Direction.SouthWest,
+            "A" => Direction.NorthEast,
+            "B" => Direction.NorthWest,
+            "C" => Direction.SouthEast,
+            "D" => Direction.SouthWest,
             _ => throw new ArgumentException($"Invalid direction token: {token}", nameof(token))
         };
     }
