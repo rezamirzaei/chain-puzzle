@@ -17,4 +17,8 @@
     <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.8" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
   </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Assets\Audio\*.wav" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

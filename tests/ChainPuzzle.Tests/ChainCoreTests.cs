@@ -99,6 +99,10 @@ public sealed class ChainCoreTests
             Assert.False(goalDistances.ContainsKey(startKey), $"{level.Id} start is already inside the shorter shell.");
             Assert.True(reachesParFrontier, $"{level.Id} start does not touch the par frontier.");
             Assert.True(level.OptimalMoves >= 6, $"Expected a hard chapter for {level.Id}, got {level.OptimalMoves}.");
+            if (level.Id is "chapter-06" or "chapter-07" or "chapter-08" or "chapter-09" or "chapter-10")
+            {
+                Assert.True(level.OptimalMoves >= 7, $"Late chapter {level.Id} should be at least 7 moves, got {level.OptimalMoves}.");
+            }
         }
     }
 
@@ -132,6 +136,13 @@ public sealed class ChainCoreTests
             Assert.True(structure.StartOverlap <= 6, $"{level.Id} start is too pre-filled: {structure.StartOverlap}.");
             Assert.True(structure.StartTrapMoveCount >= 20, $"{level.Id} start has too few trap moves: {structure.StartTrapMoveCount}.");
             Assert.True(structure.StartCloserMoveCount <= 6, $"{level.Id} start has too many obvious improving moves: {structure.StartCloserMoveCount}.");
+            Assert.True(structure.StartFalseProgressMoveCount >= 12, $"{level.Id} start has too few deceptive false-progress moves: {structure.StartFalseProgressMoveCount}.");
+
+            if (level.Id is "chapter-06" or "chapter-07" or "chapter-08" or "chapter-09" or "chapter-10")
+            {
+                Assert.True(structure.StartFalseProgressMoveCount >= 20, $"{level.Id} late start is not deceptive enough: {structure.StartFalseProgressMoveCount}.");
+                Assert.True(structure.StartTrapMoveCount >= 24, $"{level.Id} late start has too few trap moves: {structure.StartTrapMoveCount}.");
+            }
         }
     }
 

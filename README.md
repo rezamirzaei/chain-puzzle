@@ -12,8 +12,9 @@ non-solved state.
 - exact per-chapter par counts
 - chapter gallery with silhouette previews and medal tracking
 - drag controls, keyboard controls, undo/redo, and text-only or highlighted nudges
+- bundled sound effects for blocked moves and chapter solves
 - local save data for exact in-progress boards, undo/redo history, chapter progress, and best runs
-- local settings for animation speed, hint highlighting, and feedback beeps
+- local settings for animation speed, hint highlighting, and sound effects
 
 ## Runtime Architecture
 
@@ -40,6 +41,7 @@ More detail is in [docs/development.md](docs/development.md).
 - `Directory.Build.props` — shared language/analyzer settings
 - `.editorconfig` — formatting and style defaults
 - `.github/workflows/ci.yml` — build-and-test workflow for push and pull request validation
+- `.github/workflows/release-builds.yml` — packaged desktop build workflow for macOS, Windows, and Linux
 
 ## Run The Desktop App
 
@@ -62,7 +64,8 @@ The desktop app stores local data under the user application data folder in a
 
 - `progress.json` — current chapter, current board, move count, undo/redo history, cleared chapters, and best runs
 - `Continue` restores the exact puzzle state you left, including available undo and redo actions
-- `settings.json` — animation speed, nudge highlight preference, and feedback beep setting
+- `settings.json` — animation speed, nudge highlight preference, and sound-effect setting
+- `settings.json` also stores whether sound effects are enabled
 
 ## Testing
 
@@ -94,6 +97,24 @@ GitHub Actions runs:
 - release test run
 
 on both `ubuntu-latest` and `windows-latest`.
+
+Packaged desktop artifacts are produced by the release workflow for:
+
+- `linux-x64`
+- `win-x64`
+- `osx-arm64`
+
+Run the local publish command for your platform:
+
+```bash
+dotnet publish src/ChainPuzzle.Desktop/ChainPuzzle.Desktop.csproj -c Release -r osx-arm64 --self-contained false
+```
+
+Or use the helper script on macOS/Linux:
+
+```bash
+./scripts/publish-desktop.sh osx-arm64
+```
 
 ## Project Quality Defaults
 

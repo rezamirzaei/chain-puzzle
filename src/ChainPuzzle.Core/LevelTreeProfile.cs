@@ -11,6 +11,7 @@ namespace ChainPuzzle.Core;
 /// <param name="StartLegalMoveCount">Total legal moves available from the start.</param>
 /// <param name="StartCloserMoveCount">How many start moves get closer to goal.</param>
 /// <param name="StartTrapMoveCount">How many start moves are traps (move further from goal).</param>
+/// <param name="StartFalseProgressMoveCount">How many start moves keep or improve overlap without actually getting closer.</param>
 public sealed record LevelTreeProfile(
     IReadOnlyList<int> GoalShellCounts,
     int NearTargetDecoyCount,
@@ -18,4 +19,5 @@ public sealed record LevelTreeProfile(
     int StartOverlap,
     int StartLegalMoveCount,
     int StartCloserMoveCount,
-    int StartTrapMoveCount);
+    int StartTrapMoveCount,
+    int StartFalseProgressMoveCount);

@@ -45,7 +45,7 @@ The desktop project currently uses a pragmatic split:
   - input events
   - animation timing
   - control synchronization
-  - optional feedback beeps
+  - optional sound-effect triggers
 - `ChainBoardControl`
   - board rendering
 - `ShapePreviewControl`
@@ -62,11 +62,15 @@ Current settings:
 
 - animation speed
 - whether nudges also highlight the suggested joint
-- whether system feedback beeps are enabled
+- whether bundled sound effects are enabled
 
 Settings are loaded at startup and saved whenever the user changes them.
 The view model suppresses write-back during initial load, so startup does not
 rewrite the settings file just to hydrate UI state.
+
+Desktop audio playback is deliberately best-effort. The app ships WAV assets and
+uses a small platform-specific player wrapper so missing audio support never
+breaks the game loop.
 
 ## Progress Data
 
@@ -115,6 +119,23 @@ dotnet test Solution2.sln
 
 The solution is configured to treat warnings as errors and uses a pinned SDK
 via `global.json`, so local validation should match CI closely.
+
+## Release Packaging
+
+`.github/workflows/release-builds.yml` publishes packaged desktop artifacts for:
+
+- `linux-x64`
+- `win-x64`
+- `osx-arm64`
+
+Use the same publish shape locally when you need a distributable folder:
+
+```bash
+dotnet publish src/ChainPuzzle.Desktop/ChainPuzzle.Desktop.csproj -c Release -r osx-arm64 --self-contained false
+```
+
+For local packaging on macOS/Linux, `scripts/publish-desktop.sh` wraps the same
+publish command and zips the output when a zip tool is available.
 
 If the change touches chapter data, also check the resulting in-game feel, not
 just the tests. Passing structure metrics are necessary, not sufficient.

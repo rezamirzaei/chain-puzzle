@@ -158,13 +158,13 @@
                   <StackPanel Grid.Column="2"
                               VerticalAlignment="Center">
                     <CheckBox x:Name="SoundEnabledCheckBox"
-                              Content="Enable feedback beeps"
+                              Content="Enable sound effects"
                               Checked="SettingsCheckBox_OnChanged"
                               Unchecked="SettingsCheckBox_OnChanged" />
                     <TextBlock Margin="0,6,0,0"
                                FontSize="12"
                                Foreground="#64748B"
-                               Text="Uses lightweight system beeps for blocked moves and solves when supported." />
+                               Text="Plays bundled blocked-move and solve sounds when a platform audio player is available." />
                   </StackPanel>
                 </Grid>
               </Border>

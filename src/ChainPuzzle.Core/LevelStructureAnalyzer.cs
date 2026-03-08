@@ -57,7 +57,8 @@ public sealed class LevelStructureAnalyzer
             tree.StartOverlap,
             tree.StartLegalMoveCount,
             tree.StartCloserMoveCount,
-            tree.StartTrapMoveCount);
+            tree.StartTrapMoveCount,
+            tree.StartFalseProgressMoveCount);
     }
 
     public LevelTreeProfile AnalyzeTree(
@@ -117,27 +118,38 @@ public sealed class LevelStructureAnalyzer
         var startLegalMoveCount = 0;
         var startCloserMoveCount = 0;
         var startTrapMoveCount = 0;
+        var startFalseProgressMoveCount = 0;
+        var startOverlap = level.CountTargetOverlap(level.StartState);
         foreach (var legalMove in _solver.GetLegalMoves(level.StartState))
         {
             startLegalMoveCount += 1;
             var nextKey = legalMove.NextState.SerializeSegments();
-            if (goalDistances.TryGetValue(nextKey, out var nextEntry) && nextEntry.Depth < startDepth)
+            var getsCloser = goalDistances.TryGetValue(nextKey, out var nextEntry) && nextEntry.Depth < startDepth;
+            if (getsCloser)
             {
                 startCloserMoveCount += 1;
-                continue;
+            }
+            else
+            {
+                startTrapMoveCount += 1;
             }
 
-            startTrapMoveCount += 1;
+            var nextOverlap = level.CountTargetOverlap(legalMove.NextState);
+            if (nextOverlap >= startOverlap && !getsCloser)
+            {
+                startFalseProgressMoveCount += 1;
+            }
         }
 
         return new LevelTreeProfile(
             goalShellCounts,
             nearTargetDecoyCount,
             bestDecoyOverlap,
-            level.CountTargetOverlap(level.StartState),
+            startOverlap,
             startLegalMoveCount,
             startCloserMoveCount,
-            startTrapMoveCount);
+            startTrapMoveCount,
+            startFalseProgressMoveCount);
     }
 
     private Dictionary<string, DistanceEntry> BuildGoalDistanceMap(

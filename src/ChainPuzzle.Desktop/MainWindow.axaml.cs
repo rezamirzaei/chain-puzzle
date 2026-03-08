@@ -9,7 +9,6 @@ using ChainPuzzle.Core;
 using ChainPuzzle.Desktop.Controls;
 using ChainPuzzle.Desktop.ViewModels;
 using System.Diagnostics;
-using System.Threading.Tasks;
 
 namespace ChainPuzzle.Desktop;
 
@@ -31,6 +30,7 @@ public partial class MainWindow : Window
     private sealed record DragState(int JointIndex, double LastAngle, Point LastPoint);
 
     private readonly GameViewModel _vm;
+    private readonly AudioFeedbackService _audio = new();
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private readonly DispatcherTimer _frameTimer;
 
@@ -74,6 +74,7 @@ public partial class MainWindow : Window
 
     private RotationAnimation? _animation;
     private DragState? _dragState;
+    private bool _isInitializing = true;
     private bool _isSyncingPicker;
     private bool _isSyncingSettings;
 
@@ -128,6 +129,7 @@ public partial class MainWindow : Window
 
         SyncViewFromViewModel();
         RenderFrame();
+        _isInitializing = false;
     }
 
     // =====================
@@ -238,8 +240,7 @@ public partial class MainWindow : Window
         _vm.OnAnimationCompleted();
         if (solvedNow)
         {
-            PlayFeedbackTone(880, 90);
-            PlayFeedbackTone(1175, 120);
+            _audio.Play(AudioCue.ChapterSolved, _vm.SoundEnabled);
         }
     }
 
@@ -288,7 +289,7 @@ public partial class MainWindow : Window
         var fromState = _vm.CurrentState;
         if (!_vm.TryRotate(jointIndex, rotation))
         {
-            PlayFeedbackTone(220, 70);
+            _audio.Play(AudioCue.BlockedMove, _vm.SoundEnabled);
             return false;
         }
 
@@ -380,24 +381,29 @@ public partial class MainWindow : Window
 
     private void ChapterPicker_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (_isSyncingPicker || _chapterPicker.SelectedIndex < 0 || _chapterPicker.SelectedIndex == _vm.LevelIndex) return;
-        _animation = null; _dragState = null;
-        _vm.SelectChapter(_chapterPicker.SelectedIndex);
-    }
-
-    private void AnimationSpeedPicker_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
-    {
-        if (_isSyncingSettings || _animationSpeedPicker.SelectedIndex < 0)
+        if (_isInitializing || _vm is null || sender is not ComboBox picker)
         {
             return;
         }
 
-        _vm.AnimationSpeed = Math.Clamp(_animationSpeedPicker.SelectedIndex, 0, 2);
+        if (_isSyncingPicker || picker.SelectedIndex < 0 || picker.SelectedIndex == _vm.LevelIndex) return;
+        _animation = null; _dragState = null;
+        _vm.SelectChapter(picker.SelectedIndex);
+    }
+
+    private void AnimationSpeedPicker_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_isInitializing || _vm is null || sender is not ComboBox picker || _isSyncingSettings || picker.SelectedIndex < 0)
+        {
+            return;
+        }
+
+        _vm.AnimationSpeed = Math.Clamp(picker.SelectedIndex, 0, 2);
     }
 
     private void SettingsCheckBox_OnChanged(object? sender, RoutedEventArgs e)
     {
-        if (_isSyncingSettings)
+        if (_isInitializing || _vm is null || _isSyncingSettings)
         {
             return;
         }
@@ -520,27 +526,4 @@ public partial class MainWindow : Window
 
     private static Color ParseColor(string hex, Color fallback) =>
         Color.TryParse(hex, out var c) ? c : fallback;
-
-    private void PlayFeedbackTone(int frequency, int durationMs)
-    {
-        if (!_vm.SoundEnabled)
-        {
-            return;
-        }
-
-        _ = Task.Run(() =>
-        {
-            try
-            {
-                if (OperatingSystem.IsWindows())
-                {
-                    Console.Beep(frequency, durationMs);
-                }
-            }
-            catch
-            {
-                // System beeps are optional polish, never required for gameplay.
-            }
-        });
-    }
 }

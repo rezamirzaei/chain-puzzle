@@ -1,0 +1,82 @@
+name: Release Builds
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - v*
+
+jobs:
+  publish:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            rid: linux-x64
+          - os: windows-latest
+            rid: win-x64
+          - os: macos-14
+            rid: osx-arm64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            Directory.Build.props
+            global.json
+
+      - name: Restore
+        run: dotnet restore Solution2.sln
+
+      - name: Publish desktop build
+        run: >-
+          dotnet publish src/ChainPuzzle.Desktop/ChainPuzzle.Desktop.csproj
+          --configuration Release
+          --runtime ${{ matrix.rid }}
+          --self-contained false
+          --no-restore
+          -p:PublishSingleFile=false
+          -o artifacts/publish/${{ matrix.rid }}
+
+      - name: Archive package
+        shell: pwsh
+        run: |
+          $source = Join-Path $PWD "artifacts/publish/${{ matrix.rid }}/*"
+          $destination = Join-Path $PWD "artifacts/ChainChapters-${{ matrix.rid }}.zip"
+          Compress-Archive -Path $source -DestinationPath $destination -Force
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ChainChapters-${{ matrix.rid }}
+          path: artifacts/ChainChapters-${{ matrix.rid }}.zip
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download packaged artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+
+      - name: Create or update GitHub release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || \
+            gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes "Automated desktop builds for Chain Chapters."
+          find release-artifacts -type f -name '*.zip' -print0 | xargs -0 -I{} gh release upload "$GITHUB_REF_NAME" "{}" --clobber

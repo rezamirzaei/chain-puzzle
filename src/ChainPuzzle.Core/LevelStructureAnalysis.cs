@@ -13,6 +13,7 @@ namespace ChainPuzzle.Core;
 /// <param name="StartLegalMoveCount">Total number of legal moves from the start state.</param>
 /// <param name="StartCloserMoveCount">Number of moves from start that move closer to the goal.</param>
 /// <param name="StartTrapMoveCount">Number of moves from start that lead away from the goal (traps).</param>
+/// <param name="StartFalseProgressMoveCount">Number of start moves that keep or improve overlap without getting closer.</param>
 public sealed record LevelStructureAnalysis(
     int CoverSolutionCount,
     int ShortestCoverPathLength,
@@ -22,7 +23,8 @@ public sealed record LevelStructureAnalysis(
     int StartOverlap,
     int StartLegalMoveCount,
     int StartCloserMoveCount,
-    int StartTrapMoveCount)
+    int StartTrapMoveCount,
+    int StartFalseProgressMoveCount)
 {
     /// <summary>Whether the level has exactly one full-cover solution.</summary>
     public bool HasUniqueCover => CoverSolutionCount == 1;
