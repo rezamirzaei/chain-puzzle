@@ -15,7 +15,8 @@ public sealed class DesktopStateTests
             SettingsStore.CurrentVersion,
             SoundEnabled: true,
             AnimationSpeed: 2,
-            ShowHintHighlights: false));
+            ShowHintHighlights: false,
+            ExpertMode: true));
 
         var viewModel = CreateViewModel(progressStore, settingsStore);
 
@@ -23,6 +24,7 @@ public sealed class DesktopStateTests
         Assert.True(viewModel.SoundEnabled);
         Assert.Equal(2, viewModel.AnimationSpeed);
         Assert.False(viewModel.ShowHintHighlights);
+        Assert.True(viewModel.ExpertMode);
     }
 
     [Fact]
@@ -63,6 +65,28 @@ public sealed class DesktopStateTests
     }
 
     [Fact]
+    public async Task GameViewModel_ExpertMode_DisablesAssistActions()
+    {
+        var viewModel = CreateViewModel(new InMemoryProgressStore(), new InMemorySettingsStore());
+        var move = viewModel.Game.GetHintMove();
+
+        Assert.True(move.HasValue);
+        Assert.True(viewModel.TryRotate(move.Value.JointIndex, move.Value.Rotation));
+        Assert.True(viewModel.CanUndo);
+
+        viewModel.ExpertMode = true;
+        Assert.False(viewModel.CanUndo);
+        Assert.False(viewModel.CanRedo);
+        Assert.False(viewModel.CanUseHint);
+
+        viewModel.UndoCommand.Execute(null);
+        Assert.Equal("Undo is disabled in expert mode.", viewModel.StatusMessage);
+
+        await viewModel.FindHintCommand.ExecuteAsync(null);
+        Assert.Equal("Nudge is disabled in expert mode.", viewModel.StatusMessage);
+    }
+
+    [Fact]
     public void GameViewModel_ChapterCardsExposeProgressAndBranchMetrics()
     {
         var viewModel = CreateViewModel(new InMemoryProgressStore(), new InMemorySettingsStore());
@@ -75,13 +99,18 @@ public sealed class DesktopStateTests
         Assert.True(first.IsCurrent);
         Assert.Equal("Open", first.MedalLabel);
         Assert.Equal("01", first.NumberText);
-        Assert.Contains("Par 6", first.PressureText, StringComparison.Ordinal);
+        Assert.Contains("Tactical", first.PressureText, StringComparison.Ordinal);
+        Assert.Contains("par 6", first.PressureText, StringComparison.Ordinal);
         Assert.Contains("traps 25", first.PressureText, StringComparison.Ordinal);
-        Assert.Contains("Decoys 14", first.BranchText, StringComparison.Ordinal);
+        Assert.Contains("False lanes 25", first.BranchText, StringComparison.Ordinal);
+        Assert.Contains("decoys 14", first.BranchText, StringComparison.Ordinal);
 
         Assert.Equal("10", final.NumberText);
-        Assert.Contains("Par 8", final.PressureText, StringComparison.Ordinal);
+        Assert.Contains("Savage", final.PressureText, StringComparison.Ordinal);
+        Assert.Contains("par 8", final.PressureText, StringComparison.Ordinal);
         Assert.Contains("shell-4 4009", final.BranchText, StringComparison.Ordinal);
+        Assert.Equal("Tactical", viewModel.DifficultyText);
+        Assert.StartsWith("Standard:", viewModel.ModeText, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -180,13 +209,45 @@ public sealed class DesktopStateTests
         try
         {
             var store = new SettingsStore(rootDirectory);
-            store.Save(new SettingsDocument(SettingsStore.CurrentVersion, true, 99, false));
+            store.Save(new SettingsDocument(SettingsStore.CurrentVersion, true, 99, false, true));
 
             var document = store.Load();
 
             Assert.True(document.SoundEnabled);
             Assert.Equal(2, document.AnimationSpeed);
             Assert.False(document.ShowHintHighlights);
+            Assert.True(document.ExpertMode);
+        }
+        finally
+        {
+            Directory.Delete(rootDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void SettingsStore_Load_MigratesVersion1Document()
+    {
+        var rootDirectory = CreateTempDirectory();
+
+        try
+        {
+            File.WriteAllText(Path.Combine(rootDirectory, "settings.json"), """
+                {
+                  "Version": 1,
+                  "SoundEnabled": true,
+                  "AnimationSpeed": 2,
+                  "ShowHintHighlights": false
+                }
+                """);
+
+            var store = new SettingsStore(rootDirectory);
+            var document = store.Load();
+
+            Assert.Equal(SettingsStore.CurrentVersion, document.Version);
+            Assert.True(document.SoundEnabled);
+            Assert.Equal(2, document.AnimationSpeed);
+            Assert.False(document.ShowHintHighlights);
+            Assert.False(document.ExpertMode);
         }
         finally
         {

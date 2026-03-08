@@ -39,6 +39,10 @@ public sealed class ChainBoardControl : Control
     // Cached background brushes — static, never change.
     private LinearGradientBrush? _bgGradient;
     private SolidColorBrush? _bgGlow;
+    private SolidColorBrush? _bgSecondaryGlow;
+    private SolidColorBrush? _bgCenterGlow;
+    private Pen? _bgLatticePen;
+    private Pen? _bgAccentRingPen;
     private Color _cachedAccentForBg;
 
     // Cached chain brushes/pens — recreated only when accent changes.
@@ -209,30 +213,74 @@ public sealed class ChainBoardControl : Control
 
     private void DrawBackground(DrawingContext context)
     {
-        if (_bgGradient is null)
-        {
-            _bgGradient = new LinearGradientBrush
-            {
-                StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
-                EndPoint = new RelativePoint(1, 1, RelativeUnit.Relative),
-                GradientStops = new GradientStops
-                {
-                    new GradientStop(ParseColor("#E9F5FF", Colors.White), 0),
-                    new GradientStop(ParseColor("#D8F3DC", Colors.White), 0.45),
-                    new GradientStop(ParseColor("#FEFAE0", Colors.White), 1)
-                }
-            };
-        }
-
-        if (_bgGlow is null || _cachedAccentForBg != _accentColor)
-        {
-            _cachedAccentForBg = _accentColor;
-            _bgGlow = new SolidColorBrush(Color.FromArgb(36, _accentColor.R, _accentColor.G, _accentColor.B));
-        }
+        EnsureBackgroundBrushes();
 
         context.DrawRectangle(_bgGradient, null, new Rect(0, 0, Bounds.Width, Bounds.Height));
         context.DrawEllipse(_bgGlow, null, new Point(Bounds.Width * 0.2, Bounds.Height * 0.2), Bounds.Width * 0.2, Bounds.Width * 0.2);
-        context.DrawEllipse(_bgGlow, null, new Point(Bounds.Width * 0.82, Bounds.Height * 0.78), Bounds.Width * 0.17, Bounds.Width * 0.17);
+        context.DrawEllipse(_bgSecondaryGlow, null, new Point(Bounds.Width * 0.82, Bounds.Height * 0.78), Bounds.Width * 0.17, Bounds.Width * 0.17);
+        context.DrawEllipse(_bgCenterGlow, null, new Point(Bounds.Width * 0.5, Bounds.Height * 0.52), Bounds.Width * 0.24, Bounds.Height * 0.19);
+        DrawBackdropLattice(context);
+        context.DrawEllipse(null, _bgAccentRingPen, new Point(Bounds.Width * 0.5, Bounds.Height * 0.52), Bounds.Width * 0.28, Bounds.Height * 0.22);
+    }
+
+    private void EnsureBackgroundBrushes()
+    {
+        if (_bgGradient is not null && _cachedAccentForBg == _accentColor)
+        {
+            return;
+        }
+
+        _cachedAccentForBg = _accentColor;
+        var paper = ParseColor("#FFF8EF", Colors.White);
+        var mist = ParseColor("#EAF4FF", Colors.White);
+        var moss = ParseColor("#F3F8EC", Colors.White);
+        var warmAccent = Mix(_accentColor, ParseColor("#F59E0B", Colors.Gold), 0.24);
+
+        _bgGradient = new LinearGradientBrush
+        {
+            StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
+            EndPoint = new RelativePoint(1, 1, RelativeUnit.Relative),
+            GradientStops = new GradientStops
+            {
+                new GradientStop(Mix(paper, _accentColor, 0.08), 0),
+                new GradientStop(Mix(mist, _accentColor, 0.05), 0.42),
+                new GradientStop(Mix(moss, warmAccent, 0.08), 1)
+            }
+        };
+
+        _bgGlow = new SolidColorBrush(Color.FromArgb(34, _accentColor.R, _accentColor.G, _accentColor.B));
+        _bgSecondaryGlow = new SolidColorBrush(Color.FromArgb(28, warmAccent.R, warmAccent.G, warmAccent.B));
+        _bgCenterGlow = new SolidColorBrush(Color.FromArgb(24, _accentColor.R, _accentColor.G, _accentColor.B));
+        _bgLatticePen = new Pen(
+            new SolidColorBrush(Color.FromArgb(20, _accentColor.R, _accentColor.G, _accentColor.B)),
+            1.1);
+        _bgAccentRingPen = new Pen(
+            new SolidColorBrush(Color.FromArgb(18, _accentColor.R, _accentColor.G, _accentColor.B)),
+            2);
+    }
+
+    private void DrawBackdropLattice(DrawingContext context)
+    {
+        if (_bgLatticePen is null)
+        {
+            return;
+        }
+
+        var rows = (int)Math.Ceiling(Bounds.Height / 82d) + 1;
+        var cols = (int)Math.Ceiling(Bounds.Width / 96d) + 1;
+
+        for (var row = 0; row < rows; row += 1)
+        {
+            for (var col = 0; col < cols; col += 1)
+            {
+                var center = new Point(
+                    36 + (col * 96d) + ((row % 2) * 48d),
+                    28 + (row * 82d));
+                var radius = 12d + (((row + col) % 3) * 3d);
+
+                context.DrawGeometry(null, _bgLatticePen, BuildHexTileGeometry(center, radius));
+            }
+        }
     }
 
     private void DrawTarget(DrawingContext context)
@@ -489,6 +537,18 @@ public sealed class ChainBoardControl : Control
         return Color.TryParse(hexColor, out var parsedColor)
             ? parsedColor
             : fallback;
+    }
+
+    private static Color Mix(Color left, Color right, double amount)
+    {
+        var clamped = Math.Clamp(amount, 0d, 1d);
+        static byte Blend(byte a, byte b, double t) => (byte)Math.Clamp(Math.Round(a + ((b - a) * t)), 0, 255);
+
+        return Color.FromArgb(
+            Blend(left.A, right.A, clamped),
+            Blend(left.R, right.R, clamped),
+            Blend(left.G, right.G, clamped),
+            Blend(left.B, right.B, clamped));
     }
 
     private static Point Project(Point worldPoint)

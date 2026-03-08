@@ -44,6 +44,8 @@ The desktop project currently uses a pragmatic split:
   - chapter navigation
   - medal computation
   - chapter gallery card data
+  - difficulty and approach text
+  - expert-mode assist restrictions
   - hint orchestration
 - `MainWindow`
   - input events
@@ -52,6 +54,7 @@ The desktop project currently uses a pragmatic split:
   - optional sound-effect triggers
 - `ChainBoardControl`
   - board rendering
+  - accent-driven board atmosphere
 - `ShapePreviewControl`
   - chapter gallery silhouette rendering
 
@@ -71,6 +74,7 @@ Current settings:
 - animation speed
 - whether nudges also highlight the suggested joint
 - whether bundled sound effects are enabled
+- whether expert mode disables undo, redo, and nudge
 
 Settings are loaded at startup and saved whenever the user changes them.
 The view model suppresses write-back during initial load, so startup does not
@@ -103,6 +107,10 @@ Medals are derived from best move counts:
 - gold: par or better
 - silver: one move over par
 - bronze: cleared above silver
+
+Difficulty language is derived from the baked `LevelTreeProfile` metrics. The
+desktop UI should not invent difficulty copy independently of the authored
+chapter data.
 
 ## Test Layout
 
@@ -147,3 +155,7 @@ publish command and zips the output when a zip tool is available.
 
 If the change touches chapter data, also check the resulting in-game feel, not
 just the tests. Passing structure metrics are necessary, not sufficient.
+
+If the change touches difficulty presentation, keep the UI honest: trap counts,
+false-progress counts, and approach text should still match what the authored
+chapter tree is actually doing.

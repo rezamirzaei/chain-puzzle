@@ -51,6 +51,12 @@ public sealed partial class GameViewModel : ObservableObject
     [ObservableProperty]
     private bool _showHintHighlights = true;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanUndo))]
+    [NotifyPropertyChangedFor(nameof(CanRedo))]
+    [NotifyPropertyChangedFor(nameof(CanUseHint))]
+    private bool _expertMode;
+
     public GameViewModel() : this(
         new ChapterGame(ChapterFactory.CreateChapters()),
         new GameProgressStore(),
@@ -83,8 +89,9 @@ public sealed partial class GameViewModel : ObservableObject
     public int LevelIndex => _game.LevelIndex;
     public int Moves => _game.Moves;
     public bool IsSolved => _game.IsSolved;
-    public bool CanUndo => _game.CanUndo;
-    public bool CanRedo => _game.CanRedo;
+    public bool CanUndo => !ExpertMode && _game.CanUndo;
+    public bool CanRedo => !ExpertMode && _game.CanRedo;
+    public bool CanUseHint => !ExpertMode && !IsSolved;
 
     // --- HUD text properties ---
 
@@ -97,6 +104,9 @@ public sealed partial class GameViewModel : ObservableObject
     [ObservableProperty] private string _bestText = "";
     [ObservableProperty] private string _badgeText = "";
     [ObservableProperty] private string _statusText = "";
+    [ObservableProperty] private string _difficultyText = "";
+    [ObservableProperty] private string _modeText = "";
+    [ObservableProperty] private string _approachText = "";
     [ObservableProperty] private string _accentHex = "#0F766E";
 
     // --- Solved card ---
@@ -182,9 +192,13 @@ public sealed partial class GameViewModel : ObservableObject
     [RelayCommand]
     private void HomePrimary()
     {
-        StatusMessage = _hasSavedProgress
-            ? "Progress restored."
-            : "Pick a joint and start covering the silhouette.";
+        StatusMessage = ExpertMode
+            ? _hasSavedProgress
+                ? "Expert run restored."
+                : "Expert run started. No undo, redo, or nudge."
+            : _hasSavedProgress
+                ? "Progress restored."
+                : "Pick a joint and start covering the silhouette.";
         HideHome();
     }
 
@@ -203,6 +217,13 @@ public sealed partial class GameViewModel : ObservableObject
     [RelayCommand]
     private void Undo()
     {
+        if (ExpertMode)
+        {
+            StatusMessage = "Undo is disabled in expert mode.";
+            RefreshAll();
+            return;
+        }
+
         if (IsBusy || !_game.TryUndo()) return;
         StatusMessage = "Undid the last move.";
         SaveProgress();
@@ -212,6 +233,13 @@ public sealed partial class GameViewModel : ObservableObject
     [RelayCommand]
     private void Redo()
     {
+        if (ExpertMode)
+        {
+            StatusMessage = "Redo is disabled in expert mode.";
+            RefreshAll();
+            return;
+        }
+
         if (IsBusy || !_game.TryRedo()) return;
         if (IsSolved) FinalizeSolvedState();
         else StatusMessage = "Replayed the move.";
@@ -232,6 +260,13 @@ public sealed partial class GameViewModel : ObservableObject
     [RelayCommand]
     private async Task FindHint()
     {
+        if (ExpertMode)
+        {
+            StatusMessage = "Nudge is disabled in expert mode.";
+            RefreshAll();
+            return;
+        }
+
         if (IsBusy || IsSolved) return;
 
         IsFindingHint = true;
@@ -323,7 +358,8 @@ public sealed partial class GameViewModel : ObservableObject
             SettingsStore.CurrentVersion,
             SoundEnabled,
             AnimationSpeed,
-            ShowHintHighlights));
+            ShowHintHighlights,
+            ExpertMode));
     }
 
     // ====================
@@ -359,7 +395,9 @@ public sealed partial class GameViewModel : ObservableObject
         _game.CompletedLevelIds.Clear();
         _game.SetLevel(0);
         SelectedJointIndex = null;
-        StatusMessage = "New run started.";
+        StatusMessage = ExpertMode
+            ? "New expert run started."
+            : "New run started.";
         SaveProgress();
         HideHome();
     }
@@ -459,6 +497,7 @@ public sealed partial class GameViewModel : ObservableObject
             SoundEnabled = doc.SoundEnabled;
             AnimationSpeed = doc.AnimationSpeed;
             ShowHintHighlights = doc.ShowHintHighlights;
+            ExpertMode = doc.ExpertMode;
         }
         finally
         {
@@ -509,6 +548,25 @@ public sealed partial class GameViewModel : ObservableObject
         RefreshAll();
     }
 
+    partial void OnExpertModeChanged(bool value)
+    {
+        if (_isLoadingSettings)
+        {
+            return;
+        }
+
+        if (value && SelectedJointIndex is not null)
+        {
+            SelectedJointIndex = null;
+        }
+
+        SaveSettings();
+        StatusMessage = value
+            ? "Expert mode enabled. Undo, redo, and nudge are disabled."
+            : "Expert mode disabled. Assist tools are available again.";
+        RefreshAll();
+    }
+
     private void SaveProgress()
     {
         var snapshot = _game.CreateSessionSnapshot();
@@ -533,6 +591,7 @@ public sealed partial class GameViewModel : ObservableObject
     {
         var level = CurrentLevel;
         var hasBest = _bestMovesByLevelId.TryGetValue(level.Id, out var bestMoves);
+        var difficultyLabel = BuildDifficultyLabel(level);
 
         Title = level.Title;
         Subtitle = level.Subtitle;
@@ -542,7 +601,10 @@ public sealed partial class GameViewModel : ObservableObject
         CompletedText = $"{_game.CompletedLevelIds.Count}/{Levels.Count}";
         MovesText = Moves.ToString(CultureInfo.InvariantCulture);
         BestText = hasBest ? $"{bestMoves} / {level.OptimalMoves}" : $"- / {level.OptimalMoves}";
-        BadgeText = BuildBadgeText(level.OptimalMoves, hasBest, bestMoves);
+        DifficultyText = difficultyLabel;
+        ModeText = ExpertMode ? "Expert: no undo, redo, or nudge" : "Standard: assist tools enabled";
+        ApproachText = BuildApproachText(level);
+        BadgeText = BuildBadgeText(level, hasBest, bestMoves);
         ApplyBadgeStyle(hasBest, bestMoves);
 
         var solvedStatus = IsSolved && !IsBusy
@@ -569,6 +631,7 @@ public sealed partial class GameViewModel : ObservableObject
         OnPropertyChanged(nameof(IsSolved));
         OnPropertyChanged(nameof(CanUndo));
         OnPropertyChanged(nameof(CanRedo));
+        OnPropertyChanged(nameof(CanUseHint));
         OnPropertyChanged(nameof(LevelIndex));
         OnPropertyChanged(nameof(Moves));
         OnPropertyChanged(nameof(CurrentState));
@@ -586,10 +649,12 @@ public sealed partial class GameViewModel : ObservableObject
             : hasRun ? "Continue Your Run" : "Start A New Run";
 
         HomeSummary = HomeAllowsClose
-            ? $"Current chapter: {current}. Resume, jump with the gallery cards, or wipe the run and start clean."
+            ? $"Current chapter: {current}. Resume, jump with the gallery cards, or wipe the run and start clean. {(ExpertMode ? "Expert mode is active." : "Standard mode is active.")}"
             : hasRun
-                ? $"Progress is loaded and ready. Continue from {current}, or jump to another chapter from the gallery."
-                : "A fresh puzzle run is ready. Learn the chain on the early boards, then chase par on the later shapes from the gallery.";
+                ? $"Progress is loaded and ready. Continue from {current}, or jump to another chapter from the gallery. {(ExpertMode ? "Expert mode is active." : "Standard mode is active.")}"
+                : ExpertMode
+                    ? "An expert run is ready. Assist tools are off, so the puzzle tree has to do the teaching."
+                    : "A fresh puzzle run is ready. Learn the chain on the early boards, then chase par on the later shapes from the gallery.";
 
         HomeProgressInfo = $"{_game.CompletedLevelIds.Count}/{Levels.Count} chapters cleared\nCurrent: {current}";
         HomeBestInfo = _bestMovesByLevelId.Count > 0
@@ -611,7 +676,9 @@ public sealed partial class GameViewModel : ObservableObject
             ? $"🥇 {gold}  🥈 {silver}  🥉 {bronze}\n{gold + silver + bronze}/{Levels.Count} chapters rated"
             : "No medals earned yet\nPar or better = gold";
 
-        HomePrimaryLabel = HomeAllowsClose ? "Resume" : hasRun ? "Continue" : "Start Game";
+        HomePrimaryLabel = HomeAllowsClose ? "Resume"
+            : hasRun ? "Continue"
+            : ExpertMode ? "Start Expert Run" : "Start Game";
         HomeSecondaryVisible = HomeAllowsClose || hasRun;
     }
 
@@ -629,10 +696,10 @@ public sealed partial class GameViewModel : ObservableObject
             var profile = level.TreeProfile;
             var pressureText = profile is null
                 ? $"Par {level.OptimalMoves}"
-                : $"Par {level.OptimalMoves} • traps {profile.StartTrapMoveCount} • false {profile.StartFalseProgressMoveCount}";
+                : $"{BuildDifficultyLabel(level)} • par {level.OptimalMoves} • traps {profile.StartTrapMoveCount}";
             var branchText = profile is null
                 ? "No branch profile baked in"
-                : $"Decoys {profile.NearTargetDecoyCount} • shell-4 {profile.GoalShellCounts[^1]}";
+                : $"False lanes {profile.StartFalseProgressMoveCount} • decoys {profile.NearTargetDecoyCount} • shell-4 {profile.GoalShellCounts[^1]}";
 
             return new ChapterGalleryCard(
                 index,
@@ -654,9 +721,10 @@ public sealed partial class GameViewModel : ObservableObject
         ChapterPickerItems = Levels.Select((level, index) =>
         {
             var marker = _game.CompletedLevelIds.Contains(level.Id) ? "✓" : " ";
+            var difficultySuffix = $"  [{BuildDifficultyLabel(level)}]";
             var bestSuffix = _bestMovesByLevelId.TryGetValue(level.Id, out var best)
                 ? $"  best {best}/{level.OptimalMoves}" : "";
-            return $"{marker} {index + 1:00}. {level.Subtitle}{bestSuffix}";
+            return $"{marker} {index + 1:00}. {level.Subtitle}{difficultySuffix}{bestSuffix}";
         }).ToArray();
         ChapterPickerSelectedIndex = LevelIndex;
     }
@@ -677,16 +745,20 @@ public sealed partial class GameViewModel : ObservableObject
         return delta == 1 ? "Silver" : "Bronze";
     }
 
-    private string BuildBadgeText(int optimal, bool hasBest, int best)
+    private string BuildBadgeText(ChainLevel level, bool hasBest, int best)
     {
+        var difficultyLabel = BuildDifficultyLabel(level);
+        var modePrefix = ExpertMode ? "Expert" : difficultyLabel;
+
         if (IsSolved && !IsBusy && hasBest && Moves == best)
-            return Moves == optimal ? "Personal best at par" : "Personal best";
+            return Moves == level.OptimalMoves ? $"{modePrefix} run, personal best at par" : $"{modePrefix} run, personal best";
         if (IsSolved && !IsBusy)
-            return Moves == optimal ? "Chapter cleared at par" : $"Chapter cleared, par {optimal}";
+            return Moves == level.OptimalMoves ? $"{modePrefix} clear at par" : $"{modePrefix} clear, par {level.OptimalMoves}";
         if (hasBest)
-            return $"Par {optimal}, best {best}";
+            return $"{modePrefix} • par {level.OptimalMoves}, best {best}";
         return _game.CompletedLevelIds.Contains(CurrentLevel.Id)
-            ? $"Cleared before, par {optimal}" : $"Fresh chapter, par {optimal}";
+            ? $"{modePrefix} • cleared before, par {level.OptimalMoves}"
+            : $"{modePrefix} • fresh chapter, par {level.OptimalMoves}";
     }
 
     private void ApplyBadgeStyle(bool hasBest, int best)
@@ -711,6 +783,7 @@ public sealed partial class GameViewModel : ObservableObject
     {
         var bestClause = hasBest
             ? $"Best run: {best} move{(best == 1 ? "" : "s")}." : "First clear recorded.";
+        var difficultyClause = $"Difficulty: {BuildDifficultyLabel(CurrentLevel)}. {BuildApproachText(CurrentLevel)}";
         var delta = Moves - optimal;
         var parClause = delta switch
         {
@@ -721,7 +794,8 @@ public sealed partial class GameViewModel : ObservableObject
         var completion = LevelIndex == Levels.Count - 1
             ? $"You have cleared all {Levels.Count} chapters."
             : "Use Next Chapter to keep the run going.";
-        return $"Solved in {Moves} move{(Moves == 1 ? "" : "s")}. {parClause} {bestClause} {completion}";
+        var modeClause = ExpertMode ? "This was an expert run." : "This was a standard run.";
+        return $"Solved in {Moves} move{(Moves == 1 ? "" : "s")}. {parClause} {bestClause} {difficultyClause} {modeClause} {completion}";
     }
 
     private string BuildSolvedStatus(int optimal, bool hasBest, int best)
@@ -732,6 +806,48 @@ public sealed partial class GameViewModel : ObservableObject
         return Moves == best
             ? $"Solved in {Moves} moves, {parText}. Personal best matched."
             : $"Solved in {Moves} moves, {parText}. Best run is {best}.";
+    }
+
+    private static string BuildDifficultyLabel(ChainLevel level)
+    {
+        var profile = level.TreeProfile;
+        if (profile is null)
+        {
+            return $"Par {level.OptimalMoves}";
+        }
+
+        if (level.OptimalMoves >= 8 && profile.StartFalseProgressMoveCount >= 27)
+        {
+            return "Savage";
+        }
+
+        if (level.OptimalMoves >= 8)
+        {
+            return "Brutal";
+        }
+
+        if (level.OptimalMoves >= 7 || profile.StartTrapMoveCount >= 28 || profile.NearTargetDecoyCount >= 25)
+        {
+            return "Demanding";
+        }
+
+        return "Tactical";
+    }
+
+    private static string BuildApproachText(ChainLevel level)
+    {
+        var profile = level.TreeProfile;
+        if (profile is null)
+        {
+            return "Cover the silhouette exactly.";
+        }
+
+        return profile.StartCloserMoveCount switch
+        {
+            <= 2 => $"Very few obvious improving moves exist. Expect a slow read. Why hard: {profile.StartTrapMoveCount} trap starts, {profile.StartFalseProgressMoveCount} false lanes, {profile.NearTargetDecoyCount} deep decoys.",
+            <= 4 => $"Several openings look locally correct. Preserve lanes for the late fit. Why hard: {profile.StartTrapMoveCount} trap starts, {profile.StartFalseProgressMoveCount} false lanes, {profile.NearTargetDecoyCount} deep decoys.",
+            _ => $"Many starts look playable. The finish order is the real constraint. Why hard: {profile.StartTrapMoveCount} trap starts, {profile.StartFalseProgressMoveCount} false lanes, {profile.NearTargetDecoyCount} deep decoys."
+        };
     }
 
     private static string FormatRotation(int rotation) => rotation < 0 ? "left" : "right";

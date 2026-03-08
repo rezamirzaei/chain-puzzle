@@ -12,9 +12,10 @@ non-solved state.
 - exact per-chapter par counts
 - clickable chapter gallery with silhouette previews, medal tracking, par counts, and baked branch-pressure stats
 - drag controls, keyboard controls, undo/redo, and text-only or highlighted nudges
+- optional expert mode that disables undo, redo, and nudge
 - bundled sound effects for blocked moves and chapter solves
 - local save data for exact in-progress boards, undo/redo history, chapter progress, and best runs
-- local settings for animation speed, hint highlighting, and sound effects
+- local settings for animation speed, hint highlighting, sound effects, and expert mode
 
 ## Runtime Architecture
 
@@ -27,8 +28,9 @@ The solution is split into a small number of focused layers:
   - desktop shell
   - `MainWindow` handles rendering, input, and animation timing
 - `GameViewModel` owns user-facing state, progress, medals, and settings
-- `GameViewModel` also exposes chapter-card data for the home gallery
-  - `ChainBoardControl` renders the board and live chain
+- `GameViewModel` also exposes chapter-card data, difficulty readouts, approach text, and expert-mode behavior
+- `ChainBoardControl` renders the board and live chain
+- `ChainBoardControl` renders the board atmosphere as well as the chain and target
 - `ShapePreviewControl` renders chapter silhouettes in the gallery
 - baked tree-profile metrics from `ChainPuzzle.Core` are surfaced in the gallery so players can read trap pressure before opening a chapter
 - `tests/ChainPuzzle.Tests`
@@ -67,7 +69,7 @@ The desktop app stores local data under the user application data folder in a
 - `progress.json` — current chapter, current board, move count, undo/redo history, cleared chapters, and best runs
 - `Continue` restores the exact puzzle state you left, including available undo and redo actions
 - `settings.json` — animation speed, nudge highlight preference, and sound-effect setting
-- `settings.json` also stores whether sound effects are enabled
+- `settings.json` also stores whether sound effects and expert mode are enabled
 
 ## Testing
 

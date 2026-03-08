@@ -50,6 +50,7 @@ public partial class MainWindow : Window
     private readonly ComboBox _animationSpeedPicker;
     private readonly CheckBox _hintHighlightsCheckBox;
     private readonly CheckBox _soundEnabledCheckBox;
+    private readonly CheckBox _expertModeCheckBox;
     private readonly TextBlock _titleText;
     private readonly TextBlock _subtitleText;
     private readonly TextBlock _descriptionText;
@@ -57,7 +58,10 @@ public partial class MainWindow : Window
     private readonly TextBlock _completedText;
     private readonly TextBlock _movesText;
     private readonly TextBlock _bestText;
+    private readonly TextBlock _difficultyText;
+    private readonly TextBlock _modeText;
     private readonly TextBlock _validationText;
+    private readonly TextBlock _approachText;
     private readonly TextBlock _statusText;
     private readonly TextBlock _solvedTitleText;
     private readonly TextBlock _solvedSummaryText;
@@ -100,6 +104,7 @@ public partial class MainWindow : Window
         _animationSpeedPicker = GetRequiredControl<ComboBox>("AnimationSpeedPicker");
         _hintHighlightsCheckBox = GetRequiredControl<CheckBox>("HintHighlightsCheckBox");
         _soundEnabledCheckBox = GetRequiredControl<CheckBox>("SoundEnabledCheckBox");
+        _expertModeCheckBox = GetRequiredControl<CheckBox>("ExpertModeCheckBox");
         _titleText = GetRequiredControl<TextBlock>("TitleText");
         _subtitleText = GetRequiredControl<TextBlock>("SubtitleText");
         _descriptionText = GetRequiredControl<TextBlock>("DescriptionText");
@@ -107,7 +112,10 @@ public partial class MainWindow : Window
         _completedText = GetRequiredControl<TextBlock>("CompletedText");
         _movesText = GetRequiredControl<TextBlock>("MovesText");
         _bestText = GetRequiredControl<TextBlock>("BestText");
+        _difficultyText = GetRequiredControl<TextBlock>("DifficultyText");
+        _modeText = GetRequiredControl<TextBlock>("ModeText");
         _validationText = GetRequiredControl<TextBlock>("ValidationText");
+        _approachText = GetRequiredControl<TextBlock>("ApproachText");
         _statusText = GetRequiredControl<TextBlock>("StatusText");
         _solvedTitleText = GetRequiredControl<TextBlock>("SolvedTitleText");
         _solvedSummaryText = GetRequiredControl<TextBlock>("SolvedSummaryText");
@@ -153,7 +161,10 @@ public partial class MainWindow : Window
         _completedText.Text = _vm.CompletedText;
         _movesText.Text = _vm.MovesText;
         _bestText.Text = _vm.BestText;
+        _difficultyText.Text = _vm.DifficultyText;
+        _modeText.Text = _vm.ModeText;
         _validationText.Text = _vm.BadgeText;
+        _approachText.Text = _vm.ApproachText;
         _statusText.Text = _vm.StatusText;
 
         _validationBadge.Background = new SolidColorBrush(ParseColor(_vm.BadgeBg, Colors.Transparent));
@@ -174,6 +185,7 @@ public partial class MainWindow : Window
         _animationSpeedPicker.SelectedIndex = Math.Clamp(_vm.AnimationSpeed, 0, 2);
         _hintHighlightsCheckBox.IsChecked = _vm.ShowHintHighlights;
         _soundEnabledCheckBox.IsChecked = _vm.SoundEnabled;
+        _expertModeCheckBox.IsChecked = _vm.ExpertMode;
         _isSyncingSettings = false;
 
         _solvedCard.IsVisible = _vm.ShowSolvedCard;
@@ -189,10 +201,11 @@ public partial class MainWindow : Window
         _redoButton.IsEnabled = canInteract && _vm.CanRedo;
         _menuButton.IsEnabled = !_vm.IsBusy;
         _resetButton.IsEnabled = canInteract;
-        _hintButton.IsEnabled = canInteract && !_vm.IsSolved;
+        _hintButton.IsEnabled = canInteract && _vm.CanUseHint;
         _chapterPicker.IsEnabled = canInteract;
         _rotateLeftButton.IsEnabled = _vm.CanRotateManually;
         _rotateRightButton.IsEnabled = _vm.CanRotateManually;
+        _hintButton.Content = _vm.ExpertMode ? "Nudge Locked" : "Nudge";
 
         var accentBrush = new SolidColorBrush(accent);
         _nextButton.Background = accentBrush;
@@ -612,6 +625,7 @@ public partial class MainWindow : Window
 
         _vm.ShowHintHighlights = _hintHighlightsCheckBox.IsChecked ?? true;
         _vm.SoundEnabled = _soundEnabledCheckBox.IsChecked ?? false;
+        _vm.ExpertMode = _expertModeCheckBox.IsChecked ?? false;
     }
 
     // =====================
