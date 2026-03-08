@@ -99,7 +99,11 @@ public sealed class ChainCoreTests
             Assert.False(goalDistances.ContainsKey(startKey), $"{level.Id} start is already inside the shorter shell.");
             Assert.True(reachesParFrontier, $"{level.Id} start does not touch the par frontier.");
             Assert.True(level.OptimalMoves >= 6, $"Expected a hard chapter for {level.Id}, got {level.OptimalMoves}.");
-            if (level.Id is "chapter-06" or "chapter-07" or "chapter-08" or "chapter-09" or "chapter-10")
+            if (level.Id is "chapter-08" or "chapter-09" or "chapter-10")
+            {
+                Assert.True(level.OptimalMoves >= 8, $"Final chapter {level.Id} should be at least 8 moves, got {level.OptimalMoves}.");
+            }
+            else if (level.Id is "chapter-06" or "chapter-07")
             {
                 Assert.True(level.OptimalMoves >= 7, $"Late chapter {level.Id} should be at least 7 moves, got {level.OptimalMoves}.");
             }

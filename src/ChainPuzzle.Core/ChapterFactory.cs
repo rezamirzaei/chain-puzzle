@@ -97,27 +97,27 @@ public static class ChapterFactory
             "Shield",
             "The shield is thick enough to read at a glance, but a bad turn still leaves no recovery lane.",
             "#ec4899",
-            7,
+            8,
             new[] { 5, 0, 1, 3, 2, 1, 1, 1, 5, 4, 4, 0, 0, 1, 2, 4, 3, 1, 1 },
-            new[] { 5, 5, 0, 1, 0, 5, 5, 5, 5, 4, 4, 5, 5, 0, 1, 1, 0, 4, 4 }),
+            new[] { 5, 5, 5, 1, 0, 5, 5, 0, 5, 4, 4, 0, 5, 0, 1, 1, 0, 5, 5 }),
         new(
             "chapter-09",
             "Chapter 9",
             "Citadel",
             "Wide walls make the target fair. The hard part is keeping the chain order alive through the center.",
             "#4b5563",
-            7,
+            8,
             new[] { 2, 4, 4, 2, 1, 5, 1, 3, 2, 0, 1, 5, 5, 1, 5, 4, 4, 2, 4 },
-            new[] { 2, 2, 2, 1, 0, 5, 0, 2, 2, 0, 1, 5, 5, 1, 5, 5, 5, 3, 5 }),
+            new[] { 2, 2, 2, 1, 0, 5, 1, 2, 2, 0, 1, 0, 0, 2, 0, 5, 5, 4, 0 }),
         new(
             "chapter-10",
             "Chapter 10",
             "Harbor",
             "Final exam: the shape is solid, the path is not. One wrong hinge and the harbor seals shut.",
             "#84cc16",
-            7,
+            8,
             new[] { 0, 1, 3, 2, 4, 5, 3, 2, 0, 2, 4, 5, 0, 0, 4, 3, 3, 4, 5 },
-            new[] { 0, 5, 1, 0, 1, 2, 0, 0, 4, 5, 1, 1, 2, 2, 1, 0, 0, 1, 2 })
+            new[] { 0, 5, 0, 5, 0, 1, 5, 5, 3, 5, 5, 0, 1, 1, 0, 5, 5, 0, 1 })
     };
 
     public static IReadOnlyList<ChainLevel> CreateChapters(bool validate = false)
