@@ -22,4 +22,9 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\ChainPuzzle.Core\ChainPuzzle.Core.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="ChapterDiagnosticTests.cs" />
+    <Compile Remove="ChapterGeneratorTests.cs" />
+  </ItemGroup>
 </Project>

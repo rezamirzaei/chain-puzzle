@@ -18,30 +18,34 @@
             IsVisible="False"
             Background="#A60F172A">
       <Grid>
-        <Border Width="640"
+        <Border Width="1120"
+                MaxHeight="820"
                 Padding="26"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
                 Classes="panel">
-          <StackPanel>
-            <TextBlock Text="Chain Puzzle"
-                       FontSize="14"
-                       FontWeight="Bold"
-                       Foreground="#0F766E" />
-            <TextBlock x:Name="HomeTitleText"
-                       Margin="0,10,0,0"
-                       FontSize="42"
-                       FontWeight="SemiBold"
-                       Foreground="#0F172A" />
-            <TextBlock x:Name="HomeSummaryText"
-                       Margin="0,10,0,16"
-                       FontSize="16"
-                       Foreground="#334155"
-                       TextWrapping="Wrap" />
+          <Grid RowDefinitions="Auto,Auto,Auto,*">
+            <StackPanel Grid.Row="0">
+              <TextBlock Text="Chain Puzzle"
+                         FontSize="14"
+                         FontWeight="Bold"
+                         Foreground="#0F766E" />
+              <TextBlock x:Name="HomeTitleText"
+                         Margin="0,10,0,0"
+                         FontSize="42"
+                         FontWeight="SemiBold"
+                         Foreground="#0F172A" />
+              <TextBlock x:Name="HomeSummaryText"
+                         Margin="0,10,0,0"
+                         FontSize="16"
+                         Foreground="#334155"
+                         TextWrapping="Wrap" />
+            </StackPanel>
 
-            <Grid ColumnDefinitions="*,*"
+            <Grid Grid.Row="1"
+                  ColumnDefinitions="*,*,*"
                   ColumnSpacing="10"
-                  Margin="0,0,0,16">
+                  Margin="0,18,0,14">
               <Border Grid.Column="0"
                       CornerRadius="12"
                       Background="#F8FAFC"
@@ -74,33 +78,73 @@
                              Foreground="#0F172A" />
                 </StackPanel>
               </Border>
+              <Border Grid.Column="2"
+                      CornerRadius="12"
+                      Background="#F8FAFC"
+                      BorderBrush="#D1D5DB"
+                      BorderThickness="1"
+                      Padding="12">
+                <StackPanel>
+                  <TextBlock Text="Medal Table"
+                             FontSize="11"
+                             Foreground="#64748B" />
+                  <TextBlock x:Name="HomeMedalText"
+                             FontSize="16"
+                             FontWeight="Bold"
+                             Foreground="#0F172A" />
+                </StackPanel>
+              </Border>
             </Grid>
 
-            <TextBlock Text="Rotate the wooden chain until it covers the filled target silhouette. Only one full cover works, and shorter solves beat par."
-                       Margin="0,0,0,18"
-                       FontSize="15"
-                       Foreground="#475569"
-                       TextWrapping="Wrap" />
+            <StackPanel Grid.Row="2">
+              <TextBlock Text="Rotate the wooden chain until it covers the filled target silhouette. Gold means par or better, silver means one over par, bronze means cleared."
+                         FontSize="15"
+                         Foreground="#475569"
+                         TextWrapping="Wrap" />
+              <Grid ColumnDefinitions="*,*,*"
+                    ColumnSpacing="10"
+                    Margin="0,18,0,0">
+                <Button x:Name="HomePrimaryButton"
+                        Grid.Column="0"
+                        Classes="action"
+                        Content="Start Game"
+                        Click="HomePrimaryButton_OnClick" />
+                <Button x:Name="HomeSecondaryButton"
+                        Grid.Column="1"
+                        Classes="action secondary"
+                        Content="New Run"
+                        Click="HomeSecondaryButton_OnClick" />
+                <Button x:Name="HomeCloseButton"
+                        Grid.Column="2"
+                        Classes="action secondary"
+                        Content="Close Menu"
+                        Click="HomeCloseButton_OnClick" />
+              </Grid>
+            </StackPanel>
 
-            <Grid ColumnDefinitions="*,*,*"
-                  ColumnSpacing="10">
-              <Button x:Name="HomePrimaryButton"
-                      Grid.Column="0"
-                      Classes="action"
-                      Content="Start Game"
-                      Click="HomePrimaryButton_OnClick" />
-              <Button x:Name="HomeSecondaryButton"
-                      Grid.Column="1"
-                      Classes="action secondary"
-                      Content="New Run"
-                      Click="HomeSecondaryButton_OnClick" />
-              <Button x:Name="HomeCloseButton"
-                      Grid.Column="2"
-                      Classes="action secondary"
-                      Content="Close Menu"
-                      Click="HomeCloseButton_OnClick" />
-            </Grid>
-          </StackPanel>
+            <Border Grid.Row="3"
+                    Margin="0,18,0,0"
+                    CornerRadius="14"
+                    Background="#F8FAFC"
+                    BorderBrush="#D1D5DB"
+                    BorderThickness="1"
+                    Padding="14">
+              <Grid RowDefinitions="Auto,*">
+                <TextBlock Text="Chapter Gallery"
+                           FontSize="14"
+                           FontWeight="Bold"
+                           Foreground="#0F172A" />
+                <ScrollViewer Grid.Row="1"
+                              Margin="0,12,0,0"
+                              VerticalScrollBarVisibility="Auto">
+                  <WrapPanel x:Name="HomeChapterGallery"
+                             ItemWidth="250"
+                             ItemHeight="208"
+                             Orientation="Horizontal" />
+                </ScrollViewer>
+              </Grid>
+            </Border>
+          </Grid>
         </Border>
       </Grid>
     </Border>

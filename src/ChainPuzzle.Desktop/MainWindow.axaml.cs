@@ -7,12 +7,16 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using ChainPuzzle.Core;
 using ChainPuzzle.Desktop.Controls;
+using ChainPuzzle.Desktop.ViewModels;
 using System.Diagnostics;
-using System.Globalization;
-using System.Threading.Tasks;
 
 namespace ChainPuzzle.Desktop;
 
+/// <summary>
+/// Main window for the Chain Chapters game.
+/// Handles rendering, animation, drag input, and keyboard shortcuts.
+/// All game logic is delegated to <see cref="GameViewModel"/>.
+/// </summary>
 public partial class MainWindow : Window
 {
     private sealed record RotationAnimation(
@@ -25,9 +29,7 @@ public partial class MainWindow : Window
 
     private sealed record DragState(int JointIndex, double LastAngle, Point LastPoint);
 
-    private readonly ChapterGame _game;
-    private readonly GameProgressStore _progressStore = new();
-    private readonly Dictionary<string, int> _bestMovesByLevelId = new(StringComparer.Ordinal);
+    private readonly GameViewModel _vm;
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private readonly DispatcherTimer _frameTimer;
 
@@ -67,12 +69,7 @@ public partial class MainWindow : Window
 
     private RotationAnimation? _animation;
     private DragState? _dragState;
-    private int? _selectedJointIndex;
-    private bool _isFindingHint;
-    private bool _isSyncingChapterPicker;
-    private bool _homeOverlayAllowsClose;
-    private bool _hasSavedProgress;
-    private string _statusMessage = "Drag a joint to rotate the chain and cover the target shape.";
+    private bool _isSyncingPicker;
 
     public MainWindow()
     {
@@ -112,32 +109,84 @@ public partial class MainWindow : Window
         _homeCloseButton = GetRequiredControl<Button>("HomeCloseButton");
         _solvedNextButton = GetRequiredControl<Button>("SolvedNextButton");
 
-        _game = new ChapterGame(ChapterFactory.CreateChapters());
-        _frameTimer = new DispatcherTimer
-        {
-            Interval = TimeSpan.FromMilliseconds(16)
-        };
-        _frameTimer.Tick += OnFrameTimerTick;
-        Closed += (_, _) => SaveProgress();
+        _vm = new GameViewModel();
+        _vm.PropertyChanged += (_, _) => SyncViewFromViewModel();
 
-        LoadProgress();
-        ShowHomeOverlay(allowClose: false);
-        RefreshHud();
+        _frameTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        _frameTimer.Tick += OnFrameTimerTick;
+        Closed += (_, _) => _vm.SaveSettings();
+
+        SyncViewFromViewModel();
         RenderFrame();
     }
 
-    private bool IsBusy => _animation is not null || _isFindingHint;
+    // =====================
+    //  View ↔ ViewModel sync
+    // =====================
 
-    private void InitializeComponent()
+    private void SyncViewFromViewModel()
     {
-        AvaloniaXamlLoader.Load(this);
+        var accent = ParseColor(_vm.AccentHex, Colors.SteelBlue);
+
+        _titleText.Text = _vm.Title;
+        _subtitleText.Text = _vm.Subtitle;
+        _descriptionText.Text = _vm.Description;
+        _progressText.Text = _vm.ProgressText;
+        _completedText.Text = _vm.CompletedText;
+        _movesText.Text = _vm.MovesText;
+        _bestText.Text = _vm.BestText;
+        _validationText.Text = _vm.BadgeText;
+        _statusText.Text = _vm.StatusText;
+
+        _validationBadge.Background = new SolidColorBrush(ParseColor(_vm.BadgeBg, Colors.Transparent));
+        _validationBadge.BorderBrush = new SolidColorBrush(ParseColor(_vm.BadgeBorder, Colors.Transparent));
+        _validationText.Foreground = new SolidColorBrush(ParseColor(_vm.BadgeFg, accent));
+
+        _homeOverlay.IsVisible = _vm.IsHomeVisible;
+        _homeTitleText.Text = _vm.HomeTitle;
+        _homeSummaryText.Text = _vm.HomeSummary;
+        _homeProgressText.Text = _vm.HomeProgressInfo;
+        _homeBestText.Text = _vm.HomeBestInfo;
+        _homePrimaryButton.Content = _vm.HomePrimaryLabel;
+        _homeSecondaryButton.IsVisible = _vm.HomeSecondaryVisible;
+        _homeCloseButton.IsVisible = _vm.HomeAllowsClose;
+
+        _solvedCard.IsVisible = _vm.ShowSolvedCard;
+        _solvedTitleText.Text = _vm.SolvedTitle;
+        _solvedSummaryText.Text = _vm.SolvedSummary;
+        _solvedNextButton.IsEnabled = _vm.CanAdvance;
+        _solvedNextButton.Content = _vm.CanAdvance ? "Next Chapter" : "All Cleared";
+
+        var canInteract = _vm.CanInteract;
+        _previousButton.IsEnabled = canInteract && _vm.LevelIndex > 0;
+        _nextButton.IsEnabled = canInteract && _vm.LevelIndex < _vm.Levels.Count - 1;
+        _undoButton.IsEnabled = canInteract && _vm.CanUndo;
+        _redoButton.IsEnabled = canInteract && _vm.CanRedo;
+        _menuButton.IsEnabled = !_vm.IsBusy;
+        _resetButton.IsEnabled = canInteract;
+        _hintButton.IsEnabled = canInteract && !_vm.IsSolved;
+        _chapterPicker.IsEnabled = canInteract;
+        _rotateLeftButton.IsEnabled = _vm.CanRotateManually;
+        _rotateRightButton.IsEnabled = _vm.CanRotateManually;
+
+        var accentBrush = new SolidColorBrush(accent);
+        _nextButton.Background = accentBrush;
+        _hintButton.Background = accentBrush;
+        _rotateLeftButton.Background = accentBrush;
+        _rotateRightButton.Background = accentBrush;
+        _solvedNextButton.Background = accentBrush;
+
+        _isSyncingPicker = true;
+        _chapterPicker.ItemsSource = _vm.ChapterPickerItems;
+        _chapterPicker.SelectedIndex = _vm.ChapterPickerSelectedIndex;
+        _isSyncingPicker = false;
+
+        RenderFrame();
     }
 
-    private T GetRequiredControl<T>(string name) where T : Control
-    {
-        return this.FindControl<T>(name)
-               ?? throw new InvalidOperationException($"Required control \"{name}\" was not found.");
-    }
+    // =====================
+    //  Rendering
+    // =====================
 
     private void RenderFrame()
     {
@@ -145,711 +194,208 @@ public partial class MainWindow : Window
 
         var chainPoints = GetDisplayPoints();
         var jointPoints = GetDisplayJointPoints(chainPoints);
-        var segmentSpans = _game.CurrentState.GetSegmentSpans();
+        var segmentSpans = _vm.CurrentState.GetSegmentSpans();
         _board.UpdateScene(
             chainPoints,
             jointPoints,
             segmentSpans,
-            _game.CurrentLevel.TargetPoints,
-            _selectedJointIndex,
-            _game.CurrentLevel.AccentHex,
-            _game.IsSolved && !IsBusy);
+            _vm.CurrentLevel.TargetPoints,
+            _vm.SelectedJointIndex,
+            _vm.AccentHex,
+            _vm.IsSolved && !_vm.IsBusy);
     }
 
     private void OnFrameTimerTick(object? sender, EventArgs e)
     {
-        if (_animation is null)
-        {
-            _frameTimer.Stop();
-            return;
-        }
-
+        if (_animation is null) { _frameTimer.Stop(); return; }
         RenderFrame();
     }
 
     private void UpdateAnimationState()
     {
-        if (_animation is null)
-        {
-            return;
-        }
-
+        if (_animation is null) return;
         var elapsed = _clock.Elapsed - _animation.StartedAt;
-        if (elapsed < _animation.Duration)
-        {
-            return;
-        }
-
+        if (elapsed < _animation.Duration) return;
         _animation = null;
-        if (_game.IsSolved)
-        {
-            FinalizeSolvedState();
-        }
-
-        RefreshHud();
+        _vm.OnAnimationCompleted();
     }
 
     private IReadOnlyList<Point> GetDisplayPoints()
     {
         if (_animation is null)
         {
-            return _game.CurrentState
-                .GetPoints()
-                .Select(point => new Point(point.X, point.Y))
-                .ToArray();
+            return _vm.CurrentState.GetPoints()
+                .Select(p => new Point(p.X, p.Y)).ToArray();
         }
 
         var elapsed = _clock.Elapsed - _animation.StartedAt;
-        var progress = Math.Clamp(
-            elapsed.TotalMilliseconds / _animation.Duration.TotalMilliseconds,
-            0d,
-            1d);
+        var progress = Math.Clamp(elapsed.TotalMilliseconds / _animation.Duration.TotalMilliseconds, 0d, 1d);
         var eased = EaseInOutCubic(progress);
         var angle = _animation.Rotation * (Math.PI / 3d) * eased;
 
-        var sourcePoints = _animation.FromState.GetPoints();
-        var pivotIndex = _animation.FromState.GetPointIndexForJoint(_animation.JointIndex);
-        var pivot = sourcePoints[pivotIndex];
-        var pivotPoint = new Point(pivot.X, pivot.Y);
+        var source = _animation.FromState.GetPoints();
+        var pivotIdx = _animation.FromState.GetPointIndexForJoint(_animation.JointIndex);
+        var pivot = new Point(source[pivotIdx].X, source[pivotIdx].Y);
 
-        var animated = new Point[sourcePoints.Count];
-        for (var index = 0; index < sourcePoints.Count; index += 1)
+        var animated = new Point[source.Count];
+        for (var i = 0; i < source.Count; i++)
         {
-            var source = new Point(sourcePoints[index].X, sourcePoints[index].Y);
-            animated[index] = index < pivotIndex
-                ? source
-                : RotateAround(source, pivotPoint, angle);
+            var s = new Point(source[i].X, source[i].Y);
+            animated[i] = i < pivotIdx ? s : RotateAround(s, pivot, angle);
         }
-
         return animated;
     }
 
     private IReadOnlyList<Point> GetDisplayJointPoints(IReadOnlyList<Point> chainPoints)
     {
-        var jointIndices = _game.CurrentState.GetJointPointIndices();
-        var jointPoints = new Point[jointIndices.Count];
-        for (var index = 0; index < jointIndices.Count; index += 1)
-        {
-            jointPoints[index] = chainPoints[jointIndices[index]];
-        }
-
-        return jointPoints;
+        var indices = _vm.CurrentState.GetJointPointIndices();
+        var pts = new Point[indices.Count];
+        for (var i = 0; i < indices.Count; i++) pts[i] = chainPoints[indices[i]];
+        return pts;
     }
 
-    private void RefreshHud()
-    {
-        var level = _game.CurrentLevel;
-        var accentColor = ParseColor(level.AccentHex, Colors.SteelBlue);
-        var hasBestRun = _bestMovesByLevelId.TryGetValue(level.Id, out var bestMoves);
-        var canInteract = !IsBusy && !_homeOverlay.IsVisible;
-
-        _titleText.Text = level.Title;
-        _subtitleText.Text = level.Subtitle;
-        _descriptionText.Text = level.Description;
-
-        _progressText.Text = $"{_game.LevelIndex + 1}/{_game.Levels.Count}";
-        _completedText.Text = $"{_game.CompletedLevelIds.Count}/{_game.Levels.Count}";
-        _movesText.Text = _game.Moves.ToString(CultureInfo.InvariantCulture);
-        _bestText.Text = FormatBestAndParText(level.OptimalMoves, hasBestRun, bestMoves);
-
-        _validationText.Text = BuildBadgeText(level.OptimalMoves, hasBestRun, bestMoves);
-        ApplyBadgeStyle(hasBestRun, bestMoves, accentColor);
-
-        var solvedStatus = _game.IsSolved && !IsBusy
-            ? BuildSolvedStatus(level.OptimalMoves, hasBestRun, bestMoves)
-            : _statusMessage;
-        _statusText.Text = _selectedJointIndex is null
-            ? solvedStatus
-            : $"{solvedStatus} Selected joint: {_selectedJointIndex}.";
-
-        _previousButton.IsEnabled = canInteract && _game.LevelIndex > 0;
-        _nextButton.IsEnabled = canInteract && _game.LevelIndex < _game.Levels.Count - 1;
-        _undoButton.IsEnabled = canInteract && _game.CanUndo;
-        _redoButton.IsEnabled = canInteract && _game.CanRedo;
-        _menuButton.IsEnabled = !IsBusy;
-        _resetButton.IsEnabled = canInteract;
-        _hintButton.IsEnabled = canInteract && !_game.IsSolved;
-        _chapterPicker.IsEnabled = canInteract;
-
-        var canRotateManually = canInteract && !_game.IsSolved && _selectedJointIndex is not null;
-        _rotateLeftButton.IsEnabled = canRotateManually;
-        _rotateRightButton.IsEnabled = canRotateManually;
-
-        var accent = new SolidColorBrush(accentColor);
-        _nextButton.Background = accent;
-        _hintButton.Background = accent;
-        _rotateLeftButton.Background = accent;
-        _rotateRightButton.Background = accent;
-        _solvedNextButton.Background = accent;
-
-        UpdateChapterPickerItems();
-        UpdateSolvedCard(level.OptimalMoves, hasBestRun, bestMoves);
-        UpdateHomeOverlay();
-    }
+    // =====================
+    //  Move execution
+    // =====================
 
     private bool TryRotate(int jointIndex, int rotation)
     {
-        if (IsBusy || _game.IsSolved)
-        {
-            return false;
-        }
+        if (_vm.IsBusy || _vm.IsSolved) return false;
 
-        var fromState = _game.CurrentState;
-        if (!_game.TryRotate(jointIndex, rotation, out var toState))
-        {
-            _statusMessage = "Move blocked by chain collision.";
-            RefreshHud();
-            return false;
-        }
+        var fromState = _vm.CurrentState;
+        if (!_vm.TryRotate(jointIndex, rotation)) return false;
 
+        _vm.IsAnimating = true;
         _animation = new RotationAnimation(
-            fromState,
-            toState,
-            jointIndex,
-            rotation,
-            _clock.Elapsed,
-            TimeSpan.FromMilliseconds(220));
-
+            fromState, _vm.CurrentState, jointIndex, rotation,
+            _clock.Elapsed, TimeSpan.FromMilliseconds(_vm.AnimationDurationMs));
         EnsureFrameLoop();
-        RenderFrame();
-        _statusMessage = $"Moved joint {jointIndex}.";
-        RefreshHud();
         return true;
     }
 
     private void EnsureFrameLoop()
     {
-        if (!_frameTimer.IsEnabled)
-        {
-            _frameTimer.Start();
-        }
+        if (!_frameTimer.IsEnabled) _frameTimer.Start();
     }
 
-    private void ChangeLevel(int nextIndex, string? status = null)
-    {
-        _game.SetLevel(nextIndex);
-        _animation = null;
-        _isFindingHint = false;
-        _dragState = null;
-        _selectedJointIndex = null;
-        _statusMessage = status ?? $"{_game.CurrentLevel.Subtitle} loaded.";
-        SaveProgress();
-        RefreshHud();
-        RenderFrame();
-    }
+    // =====================
+    //  Event handlers
+    // =====================
 
-    private void LoadProgress()
-    {
-        var document = _progressStore.Load();
-        var knownLevelIds = _game.Levels
-            .Select(level => level.Id)
-            .ToHashSet(StringComparer.Ordinal);
+    private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
 
-        foreach (var completedLevelId in document.CompletedLevelIds)
-        {
-            if (knownLevelIds.Contains(completedLevelId))
-            {
-                _game.CompletedLevelIds.Add(completedLevelId);
-            }
-        }
+    private T GetRequiredControl<T>(string name) where T : Control =>
+        this.FindControl<T>(name) ?? throw new InvalidOperationException($"Required control \"{name}\" not found.");
 
-        foreach (var entry in document.BestMovesByLevelId)
-        {
-            if (knownLevelIds.Contains(entry.Key) && entry.Value > 0)
-            {
-                _bestMovesByLevelId[entry.Key] = entry.Value;
-            }
-        }
-
-        if (document.CurrentLevelIndex != 0
-            || _game.CompletedLevelIds.Count > 0
-            || _bestMovesByLevelId.Count > 0)
-        {
-            _game.SetLevel(document.CurrentLevelIndex);
-            _statusMessage = "Progress restored.";
-        }
-
-        _hasSavedProgress = document.CurrentLevelIndex != 0
-            || _game.CompletedLevelIds.Count > 0
-            || _bestMovesByLevelId.Count > 0;
-
-        UpdateChapterPickerItems();
-    }
-
-    private void SaveProgress()
-    {
-        _progressStore.Save(
-            new GameProgressDocument(
-                GameProgressStore.CurrentVersion,
-                _game.LevelIndex,
-                _game.CompletedLevelIds.OrderBy(id => id, StringComparer.Ordinal).ToArray(),
-                new Dictionary<string, int>(_bestMovesByLevelId, StringComparer.Ordinal)));
-        _hasSavedProgress = _game.LevelIndex != 0
-            || _game.CompletedLevelIds.Count > 0
-            || _bestMovesByLevelId.Count > 0;
-    }
-
-    private bool RecordBestRun()
-    {
-        var levelId = _game.CurrentLevel.Id;
-        if (_bestMovesByLevelId.TryGetValue(levelId, out var existingBest) && existingBest <= _game.Moves)
-        {
-            return false;
-        }
-
-        _bestMovesByLevelId[levelId] = _game.Moves;
-        return true;
-    }
-
-    private void FinalizeSolvedState()
-    {
-        _selectedJointIndex = null;
-        _dragState = null;
-
-        var isNewBest = RecordBestRun();
-        _statusMessage = isNewBest
-            ? $"{_game.CurrentLevel.Subtitle} solved in {_game.Moves} moves. New personal best."
-            : $"{_game.CurrentLevel.Subtitle} solved in {_game.Moves} moves.";
-        SaveProgress();
-    }
-
-    private void UpdateSolvedCard(int optimalMoves, bool hasBestRun, int bestMoves)
-    {
-        _solvedCard.IsVisible = _game.IsSolved && !IsBusy;
-        if (!_solvedCard.IsVisible)
-        {
-            return;
-        }
-
-        _solvedTitleText.Text = _game.LevelIndex == _game.Levels.Count - 1
-            ? "Puzzle Set Complete"
-            : $"{_game.CurrentLevel.Subtitle} Solved";
-        _solvedSummaryText.Text = BuildSolvedCardSummary(optimalMoves, hasBestRun, bestMoves);
-        _solvedNextButton.IsEnabled = _game.LevelIndex < _game.Levels.Count - 1;
-        _solvedNextButton.Content = _game.LevelIndex == _game.Levels.Count - 1
-            ? "All Cleared"
-            : "Next Chapter";
-    }
-
-    private void UpdateHomeOverlay()
-    {
-        if (!_homeOverlay.IsVisible)
-        {
-            return;
-        }
-
-        var hasRunProgress = _hasSavedProgress
-            || _game.LevelIndex > 0
-            || _game.CompletedLevelIds.Count > 0
-            || _bestMovesByLevelId.Count > 0;
-        var currentChapter = $"{_game.LevelIndex + 1}/{_game.Levels.Count}: {_game.CurrentLevel.Subtitle}";
-
-        _homeTitleText.Text = _homeOverlayAllowsClose
-            ? "Pause Menu"
-            : hasRunProgress
-                ? "Continue Your Run"
-                : "Start A New Run";
-
-        _homeSummaryText.Text = _homeOverlayAllowsClose
-            ? $"Current chapter: {currentChapter}. Resume, jump chapters, or wipe the run and start clean."
-            : hasRunProgress
-                ? $"Progress is loaded and ready. Continue from {currentChapter}, or wipe the board and begin from Chapter 1."
-                : "A fresh puzzle run is ready. Learn the chain on the early boards, then chase par on the later shapes.";
-
-        _homeProgressText.Text = $"{_game.CompletedLevelIds.Count}/{_game.Levels.Count} chapters cleared\nCurrent: {currentChapter}";
-        _homeBestText.Text = _bestMovesByLevelId.Count > 0
-            ? $"{_bestMovesByLevelId.Count} chapters have saved best runs\nPar is tracked on every chapter"
-            : "No best runs stored yet\nPar is tracked on every chapter";
-
-        _homePrimaryButton.Content = _homeOverlayAllowsClose
-            ? "Resume"
-            : hasRunProgress
-                ? "Continue"
-                : "Start Game";
-        _homeSecondaryButton.IsVisible = _homeOverlayAllowsClose || hasRunProgress;
-        _homeCloseButton.IsVisible = _homeOverlayAllowsClose;
-    }
-
-    private void ShowHomeOverlay(bool allowClose)
-    {
-        _homeOverlayAllowsClose = allowClose;
-        _homeOverlay.IsVisible = true;
-        UpdateHomeOverlay();
-    }
-
-    private void HideHomeOverlay()
-    {
-        _homeOverlay.IsVisible = false;
-        _homeOverlayAllowsClose = false;
-        RefreshHud();
-        RenderFrame();
-    }
-
-    private void StartNewRun()
-    {
-        _bestMovesByLevelId.Clear();
-        _game.CompletedLevelIds.Clear();
-        _game.SetLevel(0);
-        _animation = null;
-        _isFindingHint = false;
-        _dragState = null;
-        _selectedJointIndex = null;
-        _statusMessage = "New run started.";
-        SaveProgress();
-        HideHomeOverlay();
-    }
-
-    private string BuildSolvedCardSummary(int optimalMoves, bool hasBestRun, int bestMoves)
-    {
-        var bestClause = hasBestRun
-            ? $"Best run: {bestMoves} move{(bestMoves == 1 ? string.Empty : "s")}."
-            : "First clear recorded.";
-        var parDelta = _game.Moves - optimalMoves;
-        var parClause = parDelta switch
-        {
-            < 0 => $"You beat par by {-parDelta} move{(-parDelta == 1 ? string.Empty : "s")}.",
-            0 => "You matched par exactly.",
-            _ => $"Par is {optimalMoves}, so this solve was {parDelta} move{(parDelta == 1 ? string.Empty : "s")} over."
-        };
-        var completionClause = _game.LevelIndex == _game.Levels.Count - 1
-            ? $"You have cleared all {_game.Levels.Count} chapters."
-            : "Use Next Chapter to keep the run going.";
-
-        return $"Solved in {_game.Moves} move{(_game.Moves == 1 ? string.Empty : "s")}. {parClause} {bestClause} {completionClause}";
-    }
-
-    private string BuildSolvedStatus(int optimalMoves, bool hasBestRun, int bestMoves)
-    {
-        var parDelta = _game.Moves - optimalMoves;
-        var parText = parDelta switch
-        {
-            < 0 => $"{-parDelta} under par",
-            0 => "matched par",
-            _ => $"{parDelta} over par"
-        };
-
-        if (!hasBestRun)
-        {
-            return $"Solved in {_game.Moves} moves, {parText}.";
-        }
-
-        return _game.Moves == bestMoves
-            ? $"Solved in {_game.Moves} moves, {parText}. Personal best matched."
-            : $"Solved in {_game.Moves} moves, {parText}. Best run is {bestMoves}.";
-    }
-
-    private string BuildBadgeText(int optimalMoves, bool hasBestRun, int bestMoves)
-    {
-        if (_game.IsSolved && !IsBusy && hasBestRun && _game.Moves == bestMoves)
-        {
-            return _game.Moves == optimalMoves ? "Personal best at par" : "Personal best";
-        }
-
-        if (_game.IsSolved && !IsBusy)
-        {
-            return _game.Moves == optimalMoves ? "Chapter cleared at par" : $"Chapter cleared, par {optimalMoves}";
-        }
-
-        if (hasBestRun)
-        {
-            return $"Par {optimalMoves}, best {bestMoves}";
-        }
-
-        return _game.CompletedLevelIds.Contains(_game.CurrentLevel.Id)
-            ? $"Cleared before, par {optimalMoves}"
-            : $"Fresh chapter, par {optimalMoves}";
-    }
-
-    private void ApplyBadgeStyle(bool hasBestRun, int bestMoves, Color accentColor)
-    {
-        var background = Color.FromArgb(30, accentColor.R, accentColor.G, accentColor.B);
-        var border = Color.FromArgb(90, accentColor.R, accentColor.G, accentColor.B);
-        var foreground = accentColor;
-
-        if (_game.IsSolved && !IsBusy && hasBestRun && _game.Moves == bestMoves)
-        {
-            background = ParseColor("#DCFCE7", Colors.Honeydew);
-            border = ParseColor("#86EFAC", Colors.LightGreen);
-            foreground = ParseColor("#166534", Colors.DarkGreen);
-        }
-        else if (_game.IsSolved && !IsBusy)
-        {
-            background = ParseColor("#FEF3C7", Colors.Bisque);
-            border = ParseColor("#FCD34D", Colors.Goldenrod);
-            foreground = ParseColor("#92400E", Colors.SaddleBrown);
-        }
-
-        _validationBadge.Background = new SolidColorBrush(background);
-        _validationBadge.BorderBrush = new SolidColorBrush(border);
-        _validationText.Foreground = new SolidColorBrush(foreground);
-    }
-
-    private void UpdateChapterPickerItems()
-    {
-        _isSyncingChapterPicker = true;
-        _chapterPicker.ItemsSource = _game.Levels
-            .Select((level, index) =>
-            {
-                var completedMarker = _game.CompletedLevelIds.Contains(level.Id) ? "[x]" : "[ ]";
-                var bestSuffix = _bestMovesByLevelId.TryGetValue(level.Id, out var best)
-                    ? $"  best {best}/{level.OptimalMoves}"
-                    : string.Empty;
-                return $"{completedMarker} {index + 1:00}. {level.Subtitle}{bestSuffix}";
-            })
-            .ToArray();
-        _chapterPicker.SelectedIndex = _game.LevelIndex;
-        _isSyncingChapterPicker = false;
-    }
-
-    private static string FormatBestAndParText(int optimalMoves, bool hasBestRun, int bestMoves)
-    {
-        return hasBestRun
-            ? $"{bestMoves} / {optimalMoves}"
-            : $"- / {optimalMoves}";
-    }
-
-    private static string FormatRotation(int rotation)
-    {
-        return rotation < 0 ? "left" : "right";
-    }
-
-    private void HomePrimaryButton_OnClick(object? sender, RoutedEventArgs e)
-    {
-        _statusMessage = _hasSavedProgress
-            ? "Progress restored."
-            : "Pick a joint and start covering the silhouette.";
-        HideHomeOverlay();
-    }
-
-    private void HomeSecondaryButton_OnClick(object? sender, RoutedEventArgs e)
-    {
-        StartNewRun();
-    }
-
-    private void HomeCloseButton_OnClick(object? sender, RoutedEventArgs e)
-    {
-        HideHomeOverlay();
-    }
+    private void HomePrimaryButton_OnClick(object? sender, RoutedEventArgs e) => _vm.HomePrimaryCommand.Execute(null);
+    private void HomeSecondaryButton_OnClick(object? sender, RoutedEventArgs e) => _vm.HomeSecondaryCommand.Execute(null);
+    private void HomeCloseButton_OnClick(object? sender, RoutedEventArgs e) => _vm.HomeCloseCommand.Execute(null);
 
     private void PreviousButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        ChangeLevel(_game.LevelIndex - 1);
+        _animation = null; _dragState = null;
+        _vm.PreviousLevelCommand.Execute(null);
     }
 
     private void NextButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        ChangeLevel(_game.LevelIndex + 1);
+        _animation = null; _dragState = null;
+        _vm.NextLevelCommand.Execute(null);
     }
 
     private void UndoButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (IsBusy || !_game.TryUndo())
-        {
-            return;
-        }
-
-        _animation = null;
-        _dragState = null;
-        _statusMessage = "Undid the last move.";
-        RefreshHud();
-        RenderFrame();
+        if (_vm.IsBusy) return;
+        _animation = null; _dragState = null;
+        _vm.UndoCommand.Execute(null);
     }
 
     private void RedoButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (IsBusy || !_game.TryRedo())
-        {
-            return;
-        }
-
-        _animation = null;
-        _dragState = null;
-        if (_game.IsSolved)
-        {
-            FinalizeSolvedState();
-        }
-        else
-        {
-            _statusMessage = "Replayed the move.";
-        }
-
-        RefreshHud();
-        RenderFrame();
+        if (_vm.IsBusy) return;
+        _animation = null; _dragState = null;
+        _vm.RedoCommand.Execute(null);
     }
 
-    private void MenuButton_OnClick(object? sender, RoutedEventArgs e)
-    {
-        if (IsBusy)
-        {
-            return;
-        }
-
-        ShowHomeOverlay(allowClose: true);
-        RefreshHud();
-    }
+    private void MenuButton_OnClick(object? sender, RoutedEventArgs e) => _vm.GoHomeCommand.Execute(null);
 
     private void ResetButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        _game.ResetLevel();
-        _animation = null;
-        _isFindingHint = false;
-        _dragState = null;
-        _selectedJointIndex = null;
-        _statusMessage = "Chapter reset.";
-        RefreshHud();
-        RenderFrame();
+        _animation = null; _dragState = null;
+        _vm.ResetLevelCommand.Execute(null);
     }
 
     private async void HintButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (IsBusy || _game.IsSolved)
-        {
-            return;
-        }
-
-        _isFindingHint = true;
-        _statusMessage = "Computing nudge...";
-        RefreshHud();
-
-        ChainMove? hint;
-        try
-        {
-            hint = await Task.Run(() => _game.GetHintMove());
-        }
-        finally
-        {
-            _isFindingHint = false;
-        }
-
-        if (hint is null)
-        {
-            _statusMessage = "No nudge available right now.";
-            RefreshHud();
-            return;
-        }
-
-        _selectedJointIndex = hint.Value.JointIndex;
-        _statusMessage = $"Nudge: try joint {hint.Value.JointIndex}, rotate {FormatRotation(hint.Value.Rotation)}.";
-        RefreshHud();
+        await _vm.FindHintCommand.ExecuteAsync(null);
         RenderFrame();
     }
 
     private void RotateLeftButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (_selectedJointIndex is null)
-        {
-            _statusMessage = "Select a joint first.";
-            RefreshHud();
-            return;
-        }
-
-        TryRotate(_selectedJointIndex.Value, -1);
+        if (_vm.SelectedJointIndex is null) { _vm.RotateLeftCommand.Execute(null); return; }
+        TryRotate(_vm.SelectedJointIndex.Value, -1);
     }
 
     private void RotateRightButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (_selectedJointIndex is null)
-        {
-            _statusMessage = "Select a joint first.";
-            RefreshHud();
-            return;
-        }
-
-        TryRotate(_selectedJointIndex.Value, 1);
+        if (_vm.SelectedJointIndex is null) { _vm.RotateRightCommand.Execute(null); return; }
+        TryRotate(_vm.SelectedJointIndex.Value, 1);
     }
 
-    private void SolvedResetButton_OnClick(object? sender, RoutedEventArgs e)
-    {
-        ResetButton_OnClick(sender, e);
-    }
+    private void SolvedResetButton_OnClick(object? sender, RoutedEventArgs e) => ResetButton_OnClick(sender, e);
 
     private void SolvedNextButton_OnClick(object? sender, RoutedEventArgs e)
     {
-        if (_game.LevelIndex >= _game.Levels.Count - 1)
-        {
-            return;
-        }
-
+        if (_vm.LevelIndex >= _vm.Levels.Count - 1) return;
         NextButton_OnClick(sender, e);
     }
 
     private void ChapterPicker_OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (_isSyncingChapterPicker || _chapterPicker.SelectedIndex < 0 || _chapterPicker.SelectedIndex == _game.LevelIndex)
-        {
-            return;
-        }
-
-        ChangeLevel(_chapterPicker.SelectedIndex);
+        if (_isSyncingPicker || _chapterPicker.SelectedIndex < 0 || _chapterPicker.SelectedIndex == _vm.LevelIndex) return;
+        _animation = null; _dragState = null;
+        _vm.SelectChapter(_chapterPicker.SelectedIndex);
     }
+
+    // =====================
+    //  Pointer / keyboard
+    // =====================
 
     private void Board_OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (IsBusy || _homeOverlay.IsVisible || _game.IsSolved)
-        {
-            return;
-        }
+        if (_vm.IsBusy || _vm.IsHomeVisible || _vm.IsSolved) return;
+        if (!e.GetCurrentPoint(_board).Properties.IsLeftButtonPressed) return;
 
-        var currentPoint = e.GetCurrentPoint(_board);
-        if (!currentPoint.Properties.IsLeftButtonPressed)
-        {
-            return;
-        }
+        var pos = e.GetPosition(_board);
+        var joint = _board.HitTestJoint(pos);
+        if (joint is null) { _vm.SelectJoint(null); return; }
 
-        var position = e.GetPosition(_board);
-        var jointIndex = _board.HitTestJoint(position);
-        if (jointIndex is null)
-        {
-            _selectedJointIndex = null;
-            RefreshHud();
-            RenderFrame();
-            return;
-        }
-
-        _selectedJointIndex = jointIndex;
-        _statusMessage = $"Joint {jointIndex.Value} selected.";
-        var chainPoints = GetDisplayPoints();
-        var pivotPoint = GetJointPoint(chainPoints, jointIndex.Value);
-        var pivot = _board.WorldToScreen(pivotPoint);
-        var angle = Math.Atan2(position.Y - pivot.Y, position.X - pivot.X);
-
-        _dragState = new DragState(jointIndex.Value, angle, position);
+        _vm.SelectJoint(joint);
+        var chainPts = GetDisplayPoints();
+        var pivotPt = chainPts[_vm.CurrentState.GetPointIndexForJoint(joint.Value)];
+        var pivot = _board.WorldToScreen(pivotPt);
+        _dragState = new DragState(joint.Value, Math.Atan2(pos.Y - pivot.Y, pos.X - pivot.X), pos);
         e.Pointer.Capture(_board);
-        RefreshHud();
-        RenderFrame();
     }
 
     private void Board_OnPointerMoved(object? sender, PointerEventArgs e)
     {
-        if (_dragState is null || IsBusy || _homeOverlay.IsVisible)
-        {
-            return;
-        }
+        if (_dragState is null || _vm.IsBusy || _vm.IsHomeVisible) return;
 
-        var position = e.GetPosition(_board);
-        var chainPoints = GetDisplayPoints();
-        var pivotPoint = GetJointPoint(chainPoints, _dragState.JointIndex);
-        var pivot = _board.WorldToScreen(pivotPoint);
-        var angle = Math.Atan2(position.Y - pivot.Y, position.X - pivot.X);
+        var pos = e.GetPosition(_board);
+        var chainPts = GetDisplayPoints();
+        var pivotPt = chainPts[_vm.CurrentState.GetPointIndexForJoint(_dragState.JointIndex)];
+        var pivot = _board.WorldToScreen(pivotPt);
+        var angle = Math.Atan2(pos.Y - pivot.Y, pos.X - pivot.X);
         var delta = NormalizeAngle(angle - _dragState.LastAngle);
-        var horizontalDelta = position.X - _dragState.LastPoint.X;
+        var hDelta = pos.X - _dragState.LastPoint.X;
 
-        if (Math.Abs(delta) < Math.PI / 8d && Math.Abs(horizontalDelta) < 12d)
-        {
-            return;
-        }
+        if (Math.Abs(delta) < Math.PI / 8d && Math.Abs(hDelta) < 12d) return;
 
-        var rotation = Math.Abs(horizontalDelta) > Math.Abs(delta * 48d)
-            ? (horizontalDelta > 0 ? 1 : -1)
-            : (delta > 0 ? 1 : -1);
+        var rotation = Math.Abs(hDelta) > Math.Abs(delta * 48d) ? (hDelta > 0 ? 1 : -1) : (delta > 0 ? 1 : -1);
         if (TryRotate(_dragState.JointIndex, rotation))
-        {
-            _dragState = _dragState with
-            {
-                LastAngle = angle,
-                LastPoint = position
-            };
-        }
+            _dragState = _dragState with { LastAngle = angle, LastPoint = pos };
     }
 
     private void Board_OnPointerReleased(object? sender, PointerReleasedEventArgs e)
@@ -860,154 +406,70 @@ public partial class MainWindow : Window
 
     private void Window_OnKeyDown(object? sender, KeyEventArgs e)
     {
-        if (_homeOverlay.IsVisible)
+        if (_vm.IsHomeVisible)
         {
-            if (e.Key == Key.Escape && _homeOverlayAllowsClose)
-            {
-                HideHomeOverlay();
-                e.Handled = true;
-                return;
-            }
-
-            if (e.Key is Key.Enter or Key.Space)
-            {
-                HomePrimaryButton_OnClick(sender, new RoutedEventArgs());
-                e.Handled = true;
-                return;
-            }
-
-            if (e.Key == Key.N && _homeSecondaryButton.IsVisible)
-            {
-                HomeSecondaryButton_OnClick(sender, new RoutedEventArgs());
-                e.Handled = true;
-                return;
-            }
-
+            if (e.Key == Key.Escape && _vm.HomeAllowsClose) { _vm.HomeCloseCommand.Execute(null); e.Handled = true; return; }
+            if (e.Key is Key.Enter or Key.Space) { _vm.HomePrimaryCommand.Execute(null); e.Handled = true; return; }
+            if (e.Key == Key.N && _vm.HomeSecondaryVisible) { _vm.HomeSecondaryCommand.Execute(null); e.Handled = true; return; }
             return;
         }
 
-        if (e.Key == Key.Escape)
-        {
-            _selectedJointIndex = null;
-            RefreshHud();
-            RenderFrame();
-            return;
-        }
-
-        if (IsBusy)
-        {
-            return;
-        }
+        if (e.Key == Key.Escape) { _vm.SelectJoint(null); return; }
+        if (_vm.IsBusy) return;
 
         if (e.KeyModifiers.HasFlag(KeyModifiers.Control))
         {
             var wantsRedo = e.Key == Key.Y || (e.Key == Key.Z && e.KeyModifiers.HasFlag(KeyModifiers.Shift));
-            if (e.Key == Key.Z && !wantsRedo)
-            {
-                UndoButton_OnClick(sender, new RoutedEventArgs());
-                e.Handled = true;
-                return;
-            }
-
-            if (wantsRedo)
-            {
-                RedoButton_OnClick(sender, new RoutedEventArgs());
-                e.Handled = true;
-                return;
-            }
+            if (e.Key == Key.Z && !wantsRedo) { UndoButton_OnClick(sender, new RoutedEventArgs()); e.Handled = true; return; }
+            if (wantsRedo) { RedoButton_OnClick(sender, new RoutedEventArgs()); e.Handled = true; return; }
         }
 
-        if (_game.IsSolved)
-        {
-            return;
-        }
+        if (_vm.IsSolved) return;
 
         if (e.Key is Key.Up or Key.Down)
         {
-            var minJoint = 1;
-            var maxJoint = _game.CurrentState.SegmentCount - 1;
-            if (maxJoint < minJoint)
-            {
-                return;
-            }
-
-            if (_selectedJointIndex is null)
-            {
-                _selectedJointIndex = minJoint;
-            }
+            var min = 1;
+            var max = _vm.CurrentState.SegmentCount - 1;
+            if (max < min) return;
+            if (_vm.SelectedJointIndex is null) { _vm.SelectJoint(min); }
             else
             {
-                var direction = e.Key == Key.Up ? -1 : 1;
-                var next = _selectedJointIndex.Value + direction;
-                if (next < minJoint)
-                {
-                    next = maxJoint;
-                }
-                if (next > maxJoint)
-                {
-                    next = minJoint;
-                }
-
-                _selectedJointIndex = next;
+                var next = _vm.SelectedJointIndex.Value + (e.Key == Key.Up ? -1 : 1);
+                if (next < min) next = max;
+                if (next > max) next = min;
+                _vm.SelectJoint(next);
             }
-
-            RefreshHud();
-            RenderFrame();
             e.Handled = true;
             return;
         }
 
-        if (_selectedJointIndex is not null && (e.Key == Key.A || e.Key == Key.D))
+        if (_vm.SelectedJointIndex is not null && e.Key is Key.A or Key.D)
         {
-            var rotation = e.Key == Key.A ? -1 : 1;
-            TryRotate(_selectedJointIndex.Value, rotation);
+            TryRotate(_vm.SelectedJointIndex.Value, e.Key == Key.A ? -1 : 1);
             e.Handled = true;
         }
     }
 
-    private static Point RotateAround(Point source, Point pivot, double angle)
-    {
-        var dx = source.X - pivot.X;
-        var dy = source.Y - pivot.Y;
-        var cos = Math.Cos(angle);
-        var sin = Math.Sin(angle);
+    // =====================
+    //  Math helpers
+    // =====================
 
-        return new Point(
-            pivot.X + (dx * cos) - (dy * sin),
-            pivot.Y + (dx * sin) + (dy * cos));
+    private static Point RotateAround(Point s, Point p, double a)
+    {
+        var dx = s.X - p.X; var dy = s.Y - p.Y;
+        return new Point(p.X + dx * Math.Cos(a) - dy * Math.Sin(a), p.Y + dx * Math.Sin(a) + dy * Math.Cos(a));
     }
 
-    private static double NormalizeAngle(double angle)
+    private static double NormalizeAngle(double a)
     {
-        while (angle > Math.PI)
-        {
-            angle -= Math.PI * 2d;
-        }
-        while (angle < -Math.PI)
-        {
-            angle += Math.PI * 2d;
-        }
-
-        return angle;
+        while (a > Math.PI) a -= Math.PI * 2d;
+        while (a < -Math.PI) a += Math.PI * 2d;
+        return a;
     }
 
-    private static double EaseInOutCubic(double value)
-    {
-        return value < 0.5d
-            ? 4d * value * value * value
-            : 1d - Math.Pow(-2d * value + 2d, 3d) / 2d;
-    }
+    private static double EaseInOutCubic(double v) =>
+        v < 0.5d ? 4d * v * v * v : 1d - Math.Pow(-2d * v + 2d, 3d) / 2d;
 
-    private Point GetJointPoint(IReadOnlyList<Point> chainPoints, int jointIndex)
-    {
-        var pointIndex = _game.CurrentState.GetPointIndexForJoint(jointIndex);
-        return chainPoints[pointIndex];
-    }
-
-    private static Color ParseColor(string hexColor, Color fallback)
-    {
-        return Color.TryParse(hexColor, out var color)
-            ? color
-            : fallback;
-    }
+    private static Color ParseColor(string hex, Color fallback) =>
+        Color.TryParse(hex, out var c) ? c : fallback;
 }

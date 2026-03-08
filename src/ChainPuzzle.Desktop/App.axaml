@@ -31,6 +31,17 @@
     <Style Selector="Button.action:disabled">
       <Setter Property="Opacity" Value="0.55" />
     </Style>
+    <Style Selector="Button.chapterCard">
+      <Setter Property="Foreground" Value="#0F172A" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Opacity" Value="1" />
+    </Style>
+    <Style Selector="Button.chapterCard:pointerover">
+      <Setter Property="Opacity" Value="0.96" />
+    </Style>
+    <Style Selector="Button.chapterCard:pressed">
+      <Setter Property="Opacity" Value="0.92" />
+    </Style>
     <Style Selector="ComboBox">
       <Setter Property="Background" Value="#F8FAFC" />
       <Setter Property="BorderBrush" Value="#CBD5E1" />

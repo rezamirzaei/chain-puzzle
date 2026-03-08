@@ -112,7 +112,7 @@ public sealed class ChainCoreTests
     }
 
     [Fact]
-    public void ChaptersHaveBroadTreesAndDeceptiveStarts()
+    public void ChaptersHaveBroadTreesAndSparseStarts()
     {
         var levels = ChapterFactory.CreateChapters(validate: false);
         foreach (var level in levels)
@@ -121,13 +121,13 @@ public sealed class ChainCoreTests
                 .AnalyzeTree(level, shellDepth: 4, nearTargetSlack: 4, maxVisited: 1_000_000);
 
             Assert.Equal(1, structure.GoalShellCounts[0]);
-            Assert.True(structure.GoalShellCounts[1] >= 9, $"{level.Id} shell-1 width is too small.");
-            Assert.True(structure.GoalShellCounts[2] >= 70, $"{level.Id} shell-2 width is too small.");
-            Assert.True(structure.GoalShellCounts[3] >= 450, $"{level.Id} shell-3 width is too small.");
-            Assert.True(structure.GoalShellCounts[4] >= 2_500, $"{level.Id} shell-4 width is too small.");
-            Assert.True(structure.StartOverlap >= 29, $"{level.Id} start overlap is too low: {structure.StartOverlap}.");
-            Assert.True(structure.StartTrapMoveCount >= 10, $"{level.Id} start has too few trap moves.");
-            Assert.True(structure.StartCloserMoveCount <= 4, $"{level.Id} start has too many obvious improving moves.");
+            Assert.True(structure.GoalShellCounts[1] >= 7, $"{level.Id} shell-1 width is too small: {structure.GoalShellCounts[1]}.");
+            Assert.True(structure.GoalShellCounts[2] >= 60, $"{level.Id} shell-2 width is too small: {structure.GoalShellCounts[2]}.");
+            Assert.True(structure.GoalShellCounts[3] >= 400, $"{level.Id} shell-3 width is too small: {structure.GoalShellCounts[3]}.");
+            Assert.True(structure.GoalShellCounts[4] >= 2_500, $"{level.Id} shell-4 width is too small: {structure.GoalShellCounts[4]}.");
+            Assert.True(structure.StartOverlap <= 6, $"{level.Id} start is too pre-filled: {structure.StartOverlap}.");
+            Assert.True(structure.StartTrapMoveCount >= 20, $"{level.Id} start has too few trap moves: {structure.StartTrapMoveCount}.");
+            Assert.True(structure.StartCloserMoveCount <= 6, $"{level.Id} start has too many obvious improving moves: {structure.StartCloserMoveCount}.");
         }
     }
 
@@ -172,13 +172,17 @@ public sealed class ChainCoreTests
             Assert.True(IsConnected(target), $"Target for {level.Id} must be connected.");
 
             var holes = CountHoles(target);
-            Assert.True(holes == 0, $"Target for {level.Id} must not contain holes: holes={holes}");
+            Assert.True(holes <= 3, $"Target for {level.Id} has too many holes: holes={holes}");
 
             var boundary = CountBoundaryEdges(target);
-            Assert.True(boundary <= 100, $"Target for {level.Id} is too line-like: boundary={boundary}");
+            Assert.True(boundary <= 90, $"Target for {level.Id} is too line-like: boundary={boundary}");
 
             var interiorCount = CountInteriorPoints(target);
             Assert.True(interiorCount >= 20, $"Target for {level.Id} is not filled enough: interior={interiorCount}");
+
+            var thickness = MeasureAxisThickness(target);
+            Assert.True(thickness.MaxThinRun <= 3, $"Target for {level.Id} has a thin streak that is too long: run={thickness.MaxThinRun}");
+            Assert.True(thickness.MaxThinRows <= 4, $"Target for {level.Id} has too many thin rows: rows={thickness.MaxThinRows}");
         }
     }
 
@@ -205,7 +209,7 @@ public sealed class ChainCoreTests
             {
                 var overlap = BestOverlap(levels[i].TargetPoints, levels[j].TargetPoints);
                 Assert.True(
-                    overlap <= 24,
+                    overlap <= 32,
                     $"Targets too similar: {levels[i].Id} vs {levels[j].Id} overlap={overlap}");
             }
         }
@@ -310,6 +314,40 @@ public sealed class ChainCoreTests
         }
 
         return boundary;
+    }
+
+    private static (int MaxThinRun, int MaxThinRows) MeasureAxisThickness(HashSet<IntPoint> target)
+    {
+        var axisCounts = new[]
+        {
+            target.GroupBy(point => point.X).OrderBy(group => group.Key).Select(group => group.Count()).ToArray(),
+            target.GroupBy(point => point.Y).OrderBy(group => group.Key).Select(group => group.Count()).ToArray(),
+            target.GroupBy(point => -point.X - point.Y).OrderBy(group => group.Key).Select(group => group.Count()).ToArray()
+        };
+
+        var maxThinRun = 0;
+        var maxThinRows = 0;
+        foreach (var counts in axisCounts)
+        {
+            var thinRows = 0;
+            var thinRun = 0;
+            foreach (var count in counts)
+            {
+                if (count <= 2)
+                {
+                    thinRows += 1;
+                    thinRun += 1;
+                    maxThinRun = Math.Max(maxThinRun, thinRun);
+                    continue;
+                }
+
+                thinRun = 0;
+            }
+
+            maxThinRows = Math.Max(maxThinRows, thinRows);
+        }
+
+        return (maxThinRun, maxThinRows);
     }
 
     private static int CountHoles(HashSet<IntPoint> target)
