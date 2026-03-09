@@ -108,10 +108,10 @@ public sealed class DesktopStateTests
         Assert.Contains("25 false-fit starts", first.BranchText, StringComparison.Ordinal);
         Assert.Contains("14 near-target decoys", first.BranchText, StringComparison.Ordinal);
 
-        Assert.Equal("05", final.NumberText);
-        Assert.Contains("Savage", final.DifficultyText, StringComparison.Ordinal);
-        Assert.Contains("Par 8", final.PressureText, StringComparison.Ordinal);
-        Assert.Contains("shell-4 breadth 3474", final.BranchText, StringComparison.Ordinal);
+        Assert.Equal("10", final.NumberText);
+        Assert.Contains("/100", final.DifficultyText, StringComparison.Ordinal);
+        Assert.Contains("Par 6", final.PressureText, StringComparison.Ordinal);
+        Assert.Contains("shell-4 breadth 5247", final.BranchText, StringComparison.Ordinal);
         Assert.Contains("Tactical", viewModel.DifficultyText, StringComparison.Ordinal);
         Assert.Contains("/100", viewModel.DifficultyText, StringComparison.Ordinal);
         Assert.StartsWith("Standard", viewModel.ModeText, StringComparison.Ordinal);
@@ -128,7 +128,7 @@ public sealed class DesktopStateTests
 
         Assert.Equal(3, viewModel.LevelIndex);
         Assert.False(viewModel.IsHomeVisible);
-        Assert.StartsWith("Jumped to Pyramid.", viewModel.StatusMessage, StringComparison.Ordinal);
+        Assert.StartsWith($"Jumped to {viewModel.Levels[3].Subtitle}.", viewModel.StatusMessage, StringComparison.Ordinal);
     }
 
     [Fact]

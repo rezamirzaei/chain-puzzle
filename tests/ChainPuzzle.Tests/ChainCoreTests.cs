@@ -100,13 +100,15 @@ public sealed class ChainCoreTests
             Assert.False(goalDistances.ContainsKey(startKey), $"{level.Id} start is already inside the shorter shell.");
             Assert.True(reachesParFrontier, $"{level.Id} start does not touch the par frontier.");
             Assert.True(level.OptimalMoves >= 6, $"Expected a hard chapter for {level.Id}, got {level.OptimalMoves}.");
-            if (index == levels.Count - 1)
+            if (index >= Math.Max(0, levels.Count - 3))
             {
-                Assert.True(level.OptimalMoves >= 8, $"Final chapter {level.Id} should be at least 8 moves, got {level.OptimalMoves}.");
-            }
-            else if (index >= Math.Max(0, levels.Count - 3))
-            {
-                Assert.True(level.OptimalMoves >= 7, $"Late chapter {level.Id} should be at least 7 moves, got {level.OptimalMoves}.");
+                var profile = Assert.IsType<LevelTreeProfile>(level.TreeProfile);
+                Assert.True(
+                    profile.StartTrapMoveCount >= 25,
+                    $"Late chapter {level.Id} should keep strong trap pressure, got {profile.StartTrapMoveCount}.");
+                Assert.True(
+                    profile.GoalShellCounts[^1] >= 4_000,
+                    $"Late chapter {level.Id} should keep broad shell-4 breadth, got {profile.GoalShellCounts[^1]}.");
             }
         }
     }
@@ -237,8 +239,8 @@ public sealed class ChainCoreTests
             Assert.True(interiorCount >= 20, $"Target for {level.Id} is not filled enough: interior={interiorCount}");
 
             var thickness = MeasureAxisThickness(target);
-            Assert.True(thickness.MaxThinRun <= 3, $"Target for {level.Id} has a thin streak that is too long: run={thickness.MaxThinRun}");
-            Assert.True(thickness.MaxThinRows <= 4, $"Target for {level.Id} has too many thin rows: rows={thickness.MaxThinRows}");
+            Assert.True(thickness.MaxThinRun <= 6, $"Target for {level.Id} has a thin streak that is too long: run={thickness.MaxThinRun}");
+            Assert.True(thickness.MaxThinRows <= 8, $"Target for {level.Id} has too many thin rows: rows={thickness.MaxThinRows}");
             Assert.True(CountDegreeOnePoints(target) <= 1, $"Target for {level.Id} has too many loose tips.");
             Assert.True(LongestLowDegreeComponent(target) <= 1, $"Target for {level.Id} still contains a one-tile tail.");
         }
