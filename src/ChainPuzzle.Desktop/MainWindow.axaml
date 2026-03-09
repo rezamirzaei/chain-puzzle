@@ -218,286 +218,320 @@
     </Border>
 
     <Grid Margin="20"
-          RowDefinitions="Auto,*,Auto">
-      <Border Grid.Row="0"
+          ColumnDefinitions="280,*,252"
+          RowDefinitions="Auto,*"
+          ColumnSpacing="16"
+          RowSpacing="16">
+      <Border x:Name="TitleCard"
+              Grid.Row="0"
+              Grid.Column="0"
               Classes="panel"
               Padding="18">
-        <Grid ColumnDefinitions="1.9*,1.45*,1.05*"
-              ColumnSpacing="18">
-          <StackPanel Grid.Column="0"
-                      Spacing="6">
-            <TextBlock Text="CHAIN CHAPTERS"
-                       FontSize="12"
-                       FontWeight="Bold"
-                       LetterSpacing="1.4"
-                       Foreground="#1D4ED8" />
-            <TextBlock x:Name="TitleText"
-                       FontFamily="Georgia"
-                       FontSize="30"
-                       FontWeight="SemiBold"
-                       Foreground="#0F172A" />
-            <TextBlock x:Name="SubtitleText"
-                       FontSize="18"
-                       FontWeight="SemiBold"
-                       Foreground="#475569" />
-            <TextBlock x:Name="DescriptionText"
-                       FontSize="14"
-                       Foreground="#334155"
-                       TextWrapping="Wrap" />
-          </StackPanel>
+        <StackPanel Spacing="6">
+          <TextBlock Text="CHAIN CHAPTERS"
+                     FontSize="12"
+                     FontWeight="Bold"
+                     LetterSpacing="1.4"
+                     Foreground="#1D4ED8" />
+          <TextBlock x:Name="TitleText"
+                     FontFamily="Georgia"
+                     FontSize="28"
+                     FontWeight="SemiBold"
+                     Foreground="#0F172A"
+                     TextWrapping="Wrap" />
+          <TextBlock x:Name="SubtitleText"
+                     FontSize="17"
+                     FontWeight="SemiBold"
+                     Foreground="#475569"
+                     TextWrapping="Wrap" />
+          <TextBlock x:Name="DescriptionText"
+                     FontSize="14"
+                     Foreground="#334155"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
 
-          <StackPanel Grid.Column="1"
-                      Spacing="10">
-            <WrapPanel Orientation="Horizontal"
-                       ItemWidth="156"
-                       MinHeight="104">
-              <Border Classes="metricCard"
-                      Width="150"
-                      Margin="0,0,8,8">
-                <StackPanel Spacing="3">
-                  <TextBlock Text="Progress"
-                             FontSize="11"
-                             Foreground="#64748B" />
-                  <TextBlock x:Name="ProgressText"
-                             FontSize="14"
-                             FontWeight="Bold" />
-                </StackPanel>
-              </Border>
-              <Border Classes="metricCard"
-                      Width="150"
-                      Margin="0,0,8,8">
-                <StackPanel Spacing="3">
-                  <TextBlock Text="Chapters Cleared"
-                             FontSize="11"
-                             Foreground="#64748B" />
-                  <TextBlock x:Name="CompletedText"
-                             FontSize="14"
-                             FontWeight="Bold" />
-                </StackPanel>
-              </Border>
-              <Border Classes="metricCard"
-                      Width="150"
-                      Margin="0,0,8,8">
-                <StackPanel Spacing="3">
-                  <TextBlock Text="Moves"
-                             FontSize="11"
-                             Foreground="#64748B" />
-                  <TextBlock x:Name="MovesText"
-                             FontSize="14"
-                             FontWeight="Bold" />
-                </StackPanel>
-              </Border>
-              <Border Classes="metricCard"
-                      Width="150"
-                      Margin="0,0,8,8">
-                <StackPanel Spacing="3">
-                  <TextBlock Text="Best / Par"
-                             FontSize="11"
-                             Foreground="#64748B" />
-                  <TextBlock x:Name="BestText"
-                             FontSize="14"
-                             FontWeight="Bold" />
-                </StackPanel>
-              </Border>
-              <Border Classes="metricCard"
-                      Width="150"
-                      Margin="0,0,8,8">
-                <StackPanel Spacing="3">
-                  <TextBlock Text="Difficulty"
-                             FontSize="11"
-                             Foreground="#64748B" />
-                  <TextBlock x:Name="DifficultyText"
-                             FontSize="14"
-                             FontWeight="Bold"
-                             TextWrapping="Wrap" />
-                </StackPanel>
-              </Border>
-              <Border Classes="metricCard"
-                      Width="150"
-                      Margin="0,0,8,8">
-                <StackPanel Spacing="3">
-                  <TextBlock Text="Mode"
-                             FontSize="11"
-                             Foreground="#64748B" />
-                  <TextBlock x:Name="ModeText"
-                             FontSize="14"
-                             FontWeight="Bold"
-                             TextWrapping="Wrap" />
-                </StackPanel>
-              </Border>
-            </WrapPanel>
-
-            <Border x:Name="ValidationBadge"
-                    HorizontalAlignment="Left"
-                    Background="#1E1D4ED8"
-                    BorderBrush="#421D4ED8"
-                    BorderThickness="1"
-                    CornerRadius="20"
-                    Padding="10,5">
-              <TextBlock x:Name="ValidationText"
-                         FontWeight="Bold"
-                         Foreground="#1D4ED8" />
+      <Border x:Name="MetricsCard"
+              Grid.Row="0"
+              Grid.Column="1"
+              Classes="panel"
+              Padding="16">
+        <StackPanel Spacing="12">
+          <Grid ColumnDefinitions="*,*,*"
+                RowDefinitions="Auto,Auto"
+                ColumnSpacing="10"
+                RowSpacing="10">
+            <Border Grid.Row="0"
+                    Grid.Column="0"
+                    Classes="metricCard">
+              <StackPanel Spacing="3">
+                <TextBlock Text="Progress"
+                           FontSize="11"
+                           Foreground="#64748B" />
+                <TextBlock x:Name="ProgressText"
+                           FontSize="14"
+                           FontWeight="Bold"
+                           TextWrapping="Wrap" />
+              </StackPanel>
             </Border>
+
+            <Border Grid.Row="0"
+                    Grid.Column="1"
+                    Classes="metricCard">
+              <StackPanel Spacing="3">
+                <TextBlock Text="Chapters Cleared"
+                           FontSize="11"
+                           Foreground="#64748B" />
+                <TextBlock x:Name="CompletedText"
+                           FontSize="14"
+                           FontWeight="Bold"
+                           TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+
+            <Border Grid.Row="0"
+                    Grid.Column="2"
+                    Classes="metricCard">
+              <StackPanel Spacing="3">
+                <TextBlock Text="Moves"
+                           FontSize="11"
+                           Foreground="#64748B" />
+                <TextBlock x:Name="MovesText"
+                           FontSize="14"
+                           FontWeight="Bold"
+                           TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+
+            <Border Grid.Row="1"
+                    Grid.Column="0"
+                    Classes="metricCard">
+              <StackPanel Spacing="3">
+                <TextBlock Text="Best / Par"
+                           FontSize="11"
+                           Foreground="#64748B" />
+                <TextBlock x:Name="BestText"
+                           FontSize="14"
+                           FontWeight="Bold"
+                           TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+
+            <Border Grid.Row="1"
+                    Grid.Column="1"
+                    Classes="metricCard">
+              <StackPanel Spacing="3">
+                <TextBlock Text="Difficulty"
+                           FontSize="11"
+                           Foreground="#64748B" />
+                <TextBlock x:Name="DifficultyText"
+                           FontSize="14"
+                           FontWeight="Bold"
+                           TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+
+            <Border Grid.Row="1"
+                    Grid.Column="2"
+                    Classes="metricCard">
+              <StackPanel Spacing="3">
+                <TextBlock Text="Mode"
+                           FontSize="11"
+                           Foreground="#64748B" />
+                <TextBlock x:Name="ModeText"
+                           FontSize="14"
+                           FontWeight="Bold"
+                           TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+          </Grid>
+
+          <Border x:Name="ValidationBadge"
+                  HorizontalAlignment="Left"
+                  Background="#1E1D4ED8"
+                  BorderBrush="#421D4ED8"
+                  BorderThickness="1"
+                  CornerRadius="20"
+                  Padding="10,5">
+            <TextBlock x:Name="ValidationText"
+                       FontWeight="Bold"
+                       Foreground="#1D4ED8" />
+          </Border>
+        </StackPanel>
+      </Border>
+
+      <Border x:Name="NavigationCard"
+              Grid.Row="0"
+              Grid.Column="2"
+              Classes="panel"
+              Padding="16">
+        <StackPanel Spacing="10">
+          <TextBlock Text="Chapter Controls"
+                     FontSize="11"
+                     FontWeight="Bold"
+                     Foreground="#64748B" />
+          <TextBlock Text="Move across the authored chapter path without covering the board."
+                     FontSize="12"
+                     Foreground="#475569"
+                     TextWrapping="Wrap" />
+
+          <StackPanel Spacing="4">
+            <TextBlock Text="Jump To Chapter"
+                       FontSize="11"
+                       FontWeight="Bold"
+                       Foreground="#64748B" />
+            <ComboBox x:Name="ChapterPicker"
+                      SelectionChanged="ChapterPicker_OnSelectionChanged" />
           </StackPanel>
 
-          <StackPanel Grid.Column="2"
-                      Spacing="10">
-            <StackPanel Spacing="4">
-              <TextBlock Text="Jump To Chapter"
+          <Grid ColumnDefinitions="*,*"
+                ColumnSpacing="10">
+            <Button x:Name="PreviousButton"
+                    Grid.Column="0"
+                    Classes="action secondary"
+                    Content="Previous"
+                    Click="PreviousButton_OnClick" />
+            <Button x:Name="NextButton"
+                    Grid.Column="1"
+                    Classes="action"
+                    Content="Next"
+                    Click="NextButton_OnClick" />
+          </Grid>
+
+          <Button x:Name="MenuButton"
+                  Classes="action secondary"
+                  Content="Menu"
+                  Click="MenuButton_OnClick" />
+        </StackPanel>
+      </Border>
+
+      <Border x:Name="LeftRailCard"
+              Grid.Row="1"
+              Grid.Column="0"
+              Classes="panel"
+              Padding="16"
+              VerticalAlignment="Top">
+        <StackPanel Spacing="10">
+          <Border x:Name="BoardReadCard"
+                  Classes="infoCard">
+            <StackPanel Spacing="6">
+              <TextBlock Text="Board Read"
                          FontSize="11"
                          FontWeight="Bold"
                          Foreground="#64748B" />
-              <ComboBox x:Name="ChapterPicker"
-                        SelectionChanged="ChapterPicker_OnSelectionChanged" />
+              <TextBlock x:Name="BoardReadText"
+                         FontSize="13"
+                         Foreground="#0F172A"
+                         TextWrapping="Wrap" />
             </StackPanel>
+          </Border>
 
-            <Grid ColumnDefinitions="*,*"
-                  ColumnSpacing="10">
-              <Button x:Name="PreviousButton"
-                      Grid.Column="0"
-                      Classes="action secondary"
-                      Content="Previous"
-                      Click="PreviousButton_OnClick" />
-              <Button x:Name="NextButton"
-                      Grid.Column="1"
-                      Classes="action"
-                      Content="Next"
-                      Click="NextButton_OnClick" />
-            </Grid>
+          <Border x:Name="SelectionCard"
+                  Classes="infoCard accentCard">
+            <StackPanel Spacing="6">
+              <TextBlock Text="Joint Preview"
+                         FontSize="11"
+                         FontWeight="Bold"
+                         Foreground="#64748B" />
+              <TextBlock x:Name="SelectionText"
+                         FontSize="13"
+                         Foreground="#0F172A"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
 
-            <Button x:Name="MenuButton"
-                    Classes="action secondary"
-                    Content="Menu"
-                    Click="MenuButton_OnClick" />
-          </StackPanel>
-        </Grid>
+          <Border Classes="infoCard">
+            <StackPanel Spacing="6">
+              <TextBlock Text="Method"
+                         FontSize="11"
+                         FontWeight="Bold"
+                         Foreground="#64748B" />
+              <TextBlock x:Name="ApproachText"
+                         FontSize="12"
+                         Foreground="#475569"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+
+          <Border x:Name="StatusCard"
+                  Classes="statusCard">
+            <StackPanel Spacing="6">
+              <TextBlock Text="Latest Read"
+                         FontSize="11"
+                         FontWeight="Bold"
+                         Foreground="#64748B" />
+              <TextBlock x:Name="StatusText"
+                         FontSize="14"
+                         FontWeight="SemiBold"
+                         Foreground="#0F172A"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
       </Border>
 
-      <Grid Grid.Row="2"
-            ColumnDefinitions="390,*,270"
-            ColumnSpacing="18">
-        <Border Grid.Column="0"
-                Classes="panel"
-                Padding="16">
-          <StackPanel Spacing="10">
-            <Border x:Name="BoardReadCard"
-                    Classes="infoCard">
-              <StackPanel Spacing="6">
-                <TextBlock Text="Board Read"
-                           FontSize="11"
-                           FontWeight="Bold"
-                           Foreground="#64748B" />
-                <TextBlock x:Name="BoardReadText"
-                           FontSize="13"
-                           Foreground="#0F172A"
-                           TextWrapping="Wrap" />
-              </StackPanel>
-            </Border>
+      <Border x:Name="RightRailCard"
+              Grid.Row="1"
+              Grid.Column="2"
+              Classes="panel"
+              Padding="16"
+              VerticalAlignment="Top">
+        <StackPanel Spacing="10">
+          <Border Classes="infoCard">
+            <StackPanel Spacing="8">
+              <TextBlock Text="Run Tools"
+                         FontSize="11"
+                         FontWeight="Bold"
+                         Foreground="#64748B" />
+              <Button x:Name="UndoButton"
+                      Classes="action secondary"
+                      Content="Undo"
+                      Click="UndoButton_OnClick" />
+              <Button x:Name="RedoButton"
+                      Classes="action secondary"
+                      Content="Redo"
+                      Click="RedoButton_OnClick" />
+              <Button x:Name="ResetButton"
+                      Classes="action secondary"
+                      Content="Reset"
+                      Click="ResetButton_OnClick" />
+              <Button x:Name="HintButton"
+                      Classes="action"
+                      Content="Nudge"
+                      Click="HintButton_OnClick" />
+            </StackPanel>
+          </Border>
 
-            <Border x:Name="SelectionCard"
-                    Classes="infoCard accentCard">
-              <StackPanel Spacing="6">
-                <TextBlock Text="Joint Preview"
-                           FontSize="11"
-                           FontWeight="Bold"
-                           Foreground="#64748B" />
-                <TextBlock x:Name="SelectionText"
-                           FontSize="13"
-                           Foreground="#0F172A"
-                           TextWrapping="Wrap" />
-              </StackPanel>
-            </Border>
+          <Border Classes="infoCard accentCard">
+            <StackPanel Spacing="8">
+              <TextBlock Text="Selected Joint"
+                         FontSize="11"
+                         FontWeight="Bold"
+                         Foreground="#64748B" />
+              <Button x:Name="RotateLeftButton"
+                      Classes="action"
+                      Content="Rotate Left"
+                      Click="RotateLeftButton_OnClick" />
+              <Button x:Name="RotateRightButton"
+                      Classes="action"
+                      Content="Rotate Right"
+                      Click="RotateRightButton_OnClick" />
+            </StackPanel>
+          </Border>
 
-            <Border Classes="infoCard">
-              <StackPanel Spacing="6">
-                <TextBlock Text="Method"
-                           FontSize="11"
-                           FontWeight="Bold"
-                           Foreground="#64748B" />
-                <TextBlock x:Name="ApproachText"
-                           FontSize="12"
-                           Foreground="#475569"
-                           TextWrapping="Wrap" />
-              </StackPanel>
-            </Border>
-
-            <Border x:Name="StatusCard"
-                    Classes="statusCard">
-              <StackPanel Spacing="6">
-                <TextBlock Text="Latest Read"
-                           FontSize="11"
-                           FontWeight="Bold"
-                           Foreground="#64748B" />
-                <TextBlock x:Name="StatusText"
-                           FontSize="14"
-                           FontWeight="SemiBold"
-                           Foreground="#0F172A"
-                           TextWrapping="Wrap" />
-              </StackPanel>
-            </Border>
-          </StackPanel>
-        </Border>
-
-        <Border Grid.Column="2"
-                Classes="panel"
-                Padding="16">
-          <StackPanel Spacing="10">
-            <Border Classes="infoCard">
-              <StackPanel Spacing="8">
-                <TextBlock Text="Run Tools"
-                           FontSize="11"
-                           FontWeight="Bold"
-                           Foreground="#64748B" />
-                <Button x:Name="UndoButton"
-                        Classes="action secondary"
-                        Content="Undo"
-                        Click="UndoButton_OnClick" />
-                <Button x:Name="RedoButton"
-                        Classes="action secondary"
-                        Content="Redo"
-                        Click="RedoButton_OnClick" />
-                <Button x:Name="ResetButton"
-                        Classes="action secondary"
-                        Content="Reset"
-                        Click="ResetButton_OnClick" />
-                <Button x:Name="HintButton"
-                        Classes="action"
-                        Content="Nudge"
-                        Click="HintButton_OnClick" />
-              </StackPanel>
-            </Border>
-
-            <Border Classes="infoCard accentCard">
-              <StackPanel Spacing="8">
-                <TextBlock Text="Selected Joint"
-                           FontSize="11"
-                           FontWeight="Bold"
-                           Foreground="#64748B" />
-                <Button x:Name="RotateLeftButton"
-                        Classes="action"
-                        Content="Rotate Left"
-                        Click="RotateLeftButton_OnClick" />
-                <Button x:Name="RotateRightButton"
-                        Classes="action"
-                        Content="Rotate Right"
-                        Click="RotateRightButton_OnClick" />
-              </StackPanel>
-            </Border>
-
-            <Border Classes="infoCard">
-              <StackPanel Spacing="6">
-                <TextBlock Text="Controls"
-                           FontSize="11"
-                           FontWeight="Bold"
-                           Foreground="#64748B" />
-                <TextBlock Text="Click near a joint, then drag or use Rotate Left/Right.&#10;Keyboard: Up/Down chooses a joint. A/D rotates. Ctrl+Z undoes, Ctrl+Y redoes. Nudge reveals a joint and direction, but does not move it for you."
-                           Foreground="#475569"
-                           TextWrapping="Wrap" />
-              </StackPanel>
-            </Border>
-          </StackPanel>
-        </Border>
-      </Grid>
+          <Border Classes="infoCard">
+            <StackPanel Spacing="6">
+              <TextBlock Text="Controls"
+                         FontSize="11"
+                         FontWeight="Bold"
+                         Foreground="#64748B" />
+              <TextBlock Text="Click near a joint, then drag or use Rotate Left/Right.&#10;Keyboard: Up/Down chooses a joint. A/D rotates. Ctrl+Z undoes, Ctrl+Y redoes. Nudge reveals a joint and direction, but does not move it for you."
+                         Foreground="#475569"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </Border>
     </Grid>
   </Grid>
 </Window>

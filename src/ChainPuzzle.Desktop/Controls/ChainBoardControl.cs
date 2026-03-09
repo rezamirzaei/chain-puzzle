@@ -14,6 +14,11 @@ public sealed class ChainBoardControl : Control
 {
     private const double HexHeight = 0.8660254037844386; // sqrt(3) / 2
 
+    public static readonly StyledProperty<Thickness> SafeAreaPaddingProperty =
+        AvaloniaProperty.Register<ChainBoardControl, Thickness>(
+            nameof(SafeAreaPadding),
+            new Thickness(140));
+
     private readonly List<Point> _chainPoints = new();
     private readonly HashSet<IntPoint> _chainCoverage = new();
     private readonly List<Point> _jointPoints = new();
@@ -59,6 +64,12 @@ public sealed class ChainBoardControl : Control
     public ChainBoardControl()
     {
         ClipToBounds = true;
+    }
+
+    public Thickness SafeAreaPadding
+    {
+        get => GetValue(SafeAreaPaddingProperty);
+        set => SetValue(SafeAreaPaddingProperty, value);
     }
 
     public void UpdateScene(
@@ -173,6 +184,17 @@ public sealed class ChainBoardControl : Control
         DrawCelebration(context);
     }
 
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+
+        if (change.Property == SafeAreaPaddingProperty)
+        {
+            RecalculateTransform();
+            InvalidateVisual();
+        }
+    }
+
     private void RecalculateTransform()
     {
         if (Bounds.Width <= 1 || Bounds.Height <= 1)
@@ -216,14 +238,24 @@ public sealed class ChainBoardControl : Control
         var width = Math.Max(1d, maxX - minX);
         var height = Math.Max(1d, maxY - minY);
 
-        var horizontalPadding = Math.Clamp(Bounds.Width * 0.14, 120d, 220d);
-        var verticalPadding = Math.Clamp(Bounds.Height * 0.24, 180d, 280d);
-        var scaleX = (Bounds.Width - horizontalPadding) / width;
-        var scaleY = (Bounds.Height - verticalPadding) / height;
+        var safePadding = SafeAreaPadding;
+        var safeLeft = Math.Clamp(safePadding.Left, 0d, Math.Max(0d, Bounds.Width - 220d));
+        var safeRight = Math.Clamp(safePadding.Right, 0d, Math.Max(0d, Bounds.Width - safeLeft - 220d));
+        var safeTop = Math.Clamp(safePadding.Top, 0d, Math.Max(0d, Bounds.Height - 220d));
+        var safeBottom = Math.Clamp(safePadding.Bottom, 0d, Math.Max(0d, Bounds.Height - safeTop - 220d));
+
+        var safeWidth = Math.Max(220d, Bounds.Width - safeLeft - safeRight);
+        var safeHeight = Math.Max(220d, Bounds.Height - safeTop - safeBottom);
+        var innerHorizontalPadding = Math.Clamp(safeWidth * 0.08, 40d, 84d);
+        var innerVerticalPadding = Math.Clamp(safeHeight * 0.10, 48d, 96d);
+        var scaleX = (safeWidth - innerHorizontalPadding) / width;
+        var scaleY = (safeHeight - innerVerticalPadding) / height;
         _scale = Math.Max(18d, Math.Min(scaleX, scaleY));
 
-        _offsetX = (Bounds.Width / 2d) - ((minX + maxX) / 2d) * _scale;
-        _offsetY = (Bounds.Height / 2d) - ((minY + maxY) / 2d) * _scale;
+        var safeCenterX = safeLeft + (safeWidth / 2d);
+        var safeCenterY = safeTop + (safeHeight / 2d);
+        _offsetX = safeCenterX - ((minX + maxX) / 2d) * _scale;
+        _offsetY = safeCenterY - ((minY + maxY) / 2d) * _scale;
     }
 
     private void DrawBackground(DrawingContext context)

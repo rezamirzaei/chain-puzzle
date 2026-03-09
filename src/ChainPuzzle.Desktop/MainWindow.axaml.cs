@@ -6,6 +6,7 @@ using Avalonia.Layout;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using ChainPuzzle.Core;
 using ChainPuzzle.Desktop.Controls;
 using ChainPuzzle.Desktop.ViewModels;
@@ -21,6 +22,8 @@ namespace ChainPuzzle.Desktop;
 public partial class MainWindow : Window
 {
     private static readonly TimeSpan CelebrationDuration = TimeSpan.FromMilliseconds(1100);
+    private const double DefaultBoardMargin = 24d;
+    private const double HudBoardGap = 14d;
 
     private sealed record RotationAnimation(
         ChainState FromState,
@@ -39,6 +42,11 @@ public partial class MainWindow : Window
 
     private readonly ChainBoardControl _board;
     private readonly Border _homeOverlay;
+    private readonly Border _titleCard;
+    private readonly Border _metricsCard;
+    private readonly Border _navigationCard;
+    private readonly Border _leftRailCard;
+    private readonly Border _rightRailCard;
     private readonly Border _boardReadCard;
     private readonly Border _selectionCard;
     private readonly Border _statusCard;
@@ -91,6 +99,7 @@ public partial class MainWindow : Window
     private bool _isInitializing = true;
     private bool _isSyncingPicker;
     private bool _isSyncingSettings;
+    private bool _isBoardSafeAreaUpdateQueued;
 
     public MainWindow()
     {
@@ -98,6 +107,11 @@ public partial class MainWindow : Window
 
         _board = GetRequiredControl<ChainBoardControl>("Board");
         _homeOverlay = GetRequiredControl<Border>("HomeOverlay");
+        _titleCard = GetRequiredControl<Border>("TitleCard");
+        _metricsCard = GetRequiredControl<Border>("MetricsCard");
+        _navigationCard = GetRequiredControl<Border>("NavigationCard");
+        _leftRailCard = GetRequiredControl<Border>("LeftRailCard");
+        _rightRailCard = GetRequiredControl<Border>("RightRailCard");
         _boardReadCard = GetRequiredControl<Border>("BoardReadCard");
         _selectionCard = GetRequiredControl<Border>("SelectionCard");
         _statusCard = GetRequiredControl<Border>("StatusCard");
@@ -149,6 +163,8 @@ public partial class MainWindow : Window
 
         _frameTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
         _frameTimer.Tick += OnFrameTimerTick;
+        Opened += (_, _) => QueueBoardSafeAreaUpdate();
+        SizeChanged += (_, _) => QueueBoardSafeAreaUpdate();
         Closed += (_, _) => _vm.SaveSettings();
 
         SyncViewFromViewModel();
@@ -237,7 +253,128 @@ public partial class MainWindow : Window
         _isSyncingPicker = false;
 
         SyncHomeChapterGallery();
+        QueueBoardSafeAreaUpdate();
         RenderFrame();
+    }
+
+    private void QueueBoardSafeAreaUpdate()
+    {
+        if (_isBoardSafeAreaUpdateQueued)
+        {
+            return;
+        }
+
+        _isBoardSafeAreaUpdateQueued = true;
+        Dispatcher.UIThread.Post(() =>
+        {
+            _isBoardSafeAreaUpdateQueued = false;
+            UpdateBoardSafeArea();
+        }, DispatcherPriority.Render);
+    }
+
+    private void UpdateBoardSafeArea()
+    {
+        if (Bounds.Width <= 0d || Bounds.Height <= 0d)
+        {
+            return;
+        }
+
+        if (_homeOverlay.IsVisible)
+        {
+            _board.SafeAreaPadding = new Thickness(DefaultBoardMargin);
+            return;
+        }
+
+        var left = Math.Max(DefaultBoardMargin, GetMaxRight(_titleCard, _leftRailCard) + HudBoardGap);
+        var top = Math.Max(DefaultBoardMargin, GetMaxBottom(_titleCard, _metricsCard, _navigationCard) + HudBoardGap);
+        var right = Math.Max(DefaultBoardMargin, GetMaxRightInset(_navigationCard, _rightRailCard) + HudBoardGap);
+        var bottom = Math.Max(DefaultBoardMargin, GetMaxBottomInset(_solvedCard) + HudBoardGap);
+
+        _board.SafeAreaPadding = new Thickness(left, top, right, bottom);
+    }
+
+    private double GetMaxRight(params Control[] controls)
+    {
+        var max = 0d;
+        foreach (var control in controls)
+        {
+            var bounds = GetBoundsInWindow(control);
+            if (bounds.Width <= 0d || bounds.Height <= 0d)
+            {
+                continue;
+            }
+
+            max = Math.Max(max, bounds.Right);
+        }
+
+        return max;
+    }
+
+    private double GetMaxBottom(params Control[] controls)
+    {
+        var max = 0d;
+        foreach (var control in controls)
+        {
+            var bounds = GetBoundsInWindow(control);
+            if (bounds.Width <= 0d || bounds.Height <= 0d)
+            {
+                continue;
+            }
+
+            max = Math.Max(max, bounds.Bottom);
+        }
+
+        return max;
+    }
+
+    private double GetMaxRightInset(params Control[] controls)
+    {
+        var max = 0d;
+        foreach (var control in controls)
+        {
+            var bounds = GetBoundsInWindow(control);
+            if (bounds.Width <= 0d || bounds.Height <= 0d)
+            {
+                continue;
+            }
+
+            max = Math.Max(max, Math.Max(0d, Bounds.Width - bounds.Left));
+        }
+
+        return max;
+    }
+
+    private double GetMaxBottomInset(params Control[] controls)
+    {
+        var max = 0d;
+        foreach (var control in controls)
+        {
+            var bounds = GetBoundsInWindow(control);
+            if (bounds.Width <= 0d || bounds.Height <= 0d)
+            {
+                continue;
+            }
+
+            max = Math.Max(max, Math.Max(0d, Bounds.Height - bounds.Top));
+        }
+
+        return max;
+    }
+
+    private Rect GetBoundsInWindow(Control control)
+    {
+        if (!control.IsVisible || control.Bounds.Width <= 0d || control.Bounds.Height <= 0d)
+        {
+            return default;
+        }
+
+        var origin = control.TranslatePoint(default, this);
+        if (origin is null)
+        {
+            return default;
+        }
+
+        return new Rect(origin.Value, control.Bounds.Size);
     }
 
     private void SyncHomeChapterGallery()
